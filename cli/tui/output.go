@@ -97,6 +97,12 @@ func (m *OutputModel) AppendContext(text string) {
 	m.refreshViewport()
 }
 
+// Clear resets the output content.
+func (m *OutputModel) Clear() {
+	m.content.Reset()
+	m.refreshViewport()
+}
+
 func (m *OutputModel) refreshViewport() {
 	m.viewport.SetContent(m.content.String())
 	if m.autoScroll {
