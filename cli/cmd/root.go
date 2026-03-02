@@ -3,10 +3,12 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/pearcode/pear/config"
 	"github.com/pearcode/pear/llm"
+	"github.com/pearcode/pear/logging"
 	"github.com/pearcode/pear/tui"
 	"github.com/spf13/cobra"
 )
@@ -40,7 +42,12 @@ var rootCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		fmt.Printf("🍐 Pear v0 · interactive · %s/%s\n", cfg.Provider.Active, provider.Model)
+		logsDir := filepath.Join(config.Dir(), "logs")
+		logger, _ := logging.NewLogger(logsDir)
+		if logger != nil {
+			defer logger.Close()
+			logger.Log("session_start", map[string]any{"mode": "interactive", "provider": cfg.Provider.Active})
+		}
 
 		m := tui.NewModel(cfg, client, "interactive", nil)
 		p := tea.NewProgram(m, tea.WithAltScreen())
