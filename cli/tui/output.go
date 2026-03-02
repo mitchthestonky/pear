@@ -17,7 +17,9 @@ type OutputModel struct {
 	renderer      *glamour.TermRenderer
 	autoScroll    bool
 	width         int
-	thinkingShown bool // whether "Thinking..." is currently displayed
+	thinkingShown bool   // whether "Thinking..." is currently displayed
+	bannerOnly    bool   // true until first non-banner content is added
+	bannerFunc    func(int) string // generates banner at given width
 }
 
 // NewOutputModel creates a new output component.
@@ -51,10 +53,17 @@ func (m *OutputModel) SetSize(width, height int) {
 			glamour.WithWordWrap(width-4),
 		)
 	}
+	// Re-render banner at new width if nothing else has been added yet
+	if m.bannerOnly && m.bannerFunc != nil {
+		m.content.Reset()
+		m.content.WriteString(m.bannerFunc(width))
+		m.refreshViewport()
+	}
 }
 
 // AppendHeader adds a styled header line.
 func (m *OutputModel) AppendHeader(text string) {
+	m.bannerOnly = false
 	m.content.WriteString(TriggerStyle.Render(text))
 	m.content.WriteString("\n")
 	m.refreshViewport()
@@ -62,6 +71,7 @@ func (m *OutputModel) AppendHeader(text string) {
 
 // AppendUserMessage displays the user's input in the log.
 func (m *OutputModel) AppendUserMessage(text string) {
+	m.bannerOnly = false
 	m.content.WriteString(UserMessageStyle.Render("❯ " + text))
 	m.content.WriteString("\n")
 	m.refreshViewport()
@@ -69,6 +79,7 @@ func (m *OutputModel) AppendUserMessage(text string) {
 
 // StartStream begins a new response block.
 func (m *OutputModel) StartStream(width int) {
+	m.bannerOnly = false
 	m.content.WriteString("\n")
 	m.content.WriteString(ThinkingStyle.Render("Thinking..."))
 	m.content.WriteString("\n")
@@ -125,6 +136,7 @@ func (m *OutputModel) EndStream(width int) {
 
 // AppendError adds an error message.
 func (m *OutputModel) AppendError(text string) {
+	m.bannerOnly = false
 	m.content.WriteString(ErrorStyle.Render("⚠ " + text))
 	m.content.WriteString("\n")
 	m.refreshViewport()
@@ -132,6 +144,7 @@ func (m *OutputModel) AppendError(text string) {
 
 // AppendSystem adds a system message.
 func (m *OutputModel) AppendSystem(text string) {
+	m.bannerOnly = false
 	m.content.WriteString(SystemStyle.Render(text))
 	m.content.WriteString("\n")
 	m.refreshViewport()
@@ -139,6 +152,7 @@ func (m *OutputModel) AppendSystem(text string) {
 
 // AppendContext adds a context line.
 func (m *OutputModel) AppendContext(text string) {
+	m.bannerOnly = false
 	m.content.WriteString(ContextStyle.Render("📎 Context: " + text))
 	m.content.WriteString("\n")
 	m.refreshViewport()

@@ -73,8 +73,10 @@ func NewModel(cfg *config.Config, client llm.LLMClient, mode string, triggers <-
 	lpath := filepath.Join(config.Dir(), "learning.json")
 	store, _ := learning.Load(lpath)
 	output := NewOutputModel(80, 20)
-	banner := WelcomeBanner(cfg, 80)
-	output.content.WriteString(banner)
+	bannerFn := func(w int) string { return WelcomeBanner(cfg, w) }
+	output.bannerFunc = bannerFn
+	output.bannerOnly = true
+	output.content.WriteString(bannerFn(80))
 	output.refreshViewport()
 	return Model{
 		input:        NewInputModel(),
@@ -112,6 +114,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 		outputHeight := m.height - 3 // reserve space for input
 		m.output.SetSize(m.width, outputHeight)
+		m.output.refreshViewport()
 		return m, nil
 
 	case tea.KeyMsg:
@@ -240,12 +243,19 @@ func (m Model) View() string {
 	b.WriteString(header)
 	b.WriteString("\n")
 
-	// Output
+	// Output (viewport fills remaining space)
 	b.WriteString(m.output.View())
 	b.WriteString("\n")
 
 	// Input
-	b.WriteString(m.input.View())
+	inputView := m.input.View()
+	b.WriteString(inputView)
+
+	// Pad to fill terminal height to prevent alt screen artifacts on resize
+	lines := strings.Count(b.String(), "\n") + 1
+	if pad := m.height - lines; pad > 0 {
+		b.WriteString(strings.Repeat("\n", pad))
+	}
 
 	return b.String()
 }

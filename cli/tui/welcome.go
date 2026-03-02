@@ -20,15 +20,19 @@ func WelcomeBanner(cfg *config.Config, width int) string {
 	greenBold := lipgloss.NewStyle().Foreground(colorGreen).Bold(true)
 	dim := lipgloss.NewStyle().Foreground(colorDim)
 
-	// ASCII pear
-	pear := green.Render(strings.Join([]string{
-		`    ,`,
-		`   / \`,
-		`  /   \`,
-		` (     )`,
-		`  \   /`,
-		`   \_/`,
-	}, "\n"))
+	// Pixel-art pear using block characters
+	pearGreen := lipgloss.NewStyle().Foreground(lipgloss.Color("#5FD75F"))
+	pearBrown := lipgloss.NewStyle().Foreground(lipgloss.Color("#8B6914"))
+	pear := strings.Join([]string{
+		"      " + pearBrown.Render("██"),
+		"     " + pearGreen.Render("████"),
+		"    " + pearGreen.Render("██████"),
+		"   " + pearGreen.Render("████████"),
+		"  " + pearGreen.Render("██████████"),
+		"  " + pearGreen.Render("██████████"),
+		"   " + pearGreen.Render("████████"),
+		"    " + pearGreen.Render("██████"),
+	}, "\n")
 
 	provider := config.ActiveProvider(cfg)
 	modelInfo := fmt.Sprintf("%s/%s", cfg.Provider.Active, provider.Model)
