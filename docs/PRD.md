@@ -142,7 +142,7 @@ active = "openrouter"
 
 [provider.anthropic]
 api_key = "sk-ant-..."
-model = "claude-sonnet-4-5-20250929"
+model = "anthropic/claude-haiku-4.5"
 
 [provider.openai]
 api_key = "sk-..."
@@ -336,10 +336,11 @@ that case, and how would you handle it?
 1. **Teach the concept, not just the fix.** "Strings are immutable in Go, so `+=` copies the entire string" > "use `strings.Builder`"
 2. **Connect to the broader ecosystem.** Ground lessons in real-world patterns.
 3. **Reinforce good patterns.** When the user does something right, say why it's right.
-4. **Socratic over informational.** End with a reasoning question, not "do you understand?"
+4. **Direct over Socratic.** Deliver insights directly — no quizzing, no "what do you think?" endings. Be a pair programmer, not a tutor.
 5. **Ambient over interruptive.** Proactive reviews are nudges, not lectures. 2-3 teaching points max.
 6. **Teach in the gaps.** Wait for natural pauses. Never interrupt active coding.
 7. **Calibrate to the developer.** Read level from config, match explanation depth.
+8. **Tag concepts.** End responses with `📚 Concepts:` and `🔗 Related:` tags for learning tracking.
 
 ---
 
