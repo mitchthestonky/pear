@@ -67,9 +67,8 @@ func (m *OutputModel) AppendUserMessage(text string) {
 	m.refreshViewport()
 }
 
-// StartStream begins a new response block with an opening separator.
+// StartStream begins a new response block.
 func (m *OutputModel) StartStream(width int) {
-	m.content.WriteString(SeparatorOpen(width))
 	m.content.WriteString("\n")
 	m.content.WriteString(ThinkingStyle.Render("Thinking..."))
 	m.content.WriteString("\n")
@@ -95,8 +94,19 @@ func (m *OutputModel) AppendChunk(text string) {
 	m.refreshViewport()
 }
 
-// EndStream adds a closing separator.
+// EndStream finalizes the stream block.
 func (m *OutputModel) EndStream(width int) {
+	// Remove "Thinking..." if it was never cleared by a chunk
+	if m.thinkingShown {
+		s := m.content.String()
+		thinkingLine := ThinkingStyle.Render("Thinking...") + "\n"
+		if idx := strings.LastIndex(s, thinkingLine); idx >= 0 {
+			m.content.Reset()
+			m.content.WriteString(s[:idx] + s[idx+len(thinkingLine):])
+		}
+		m.thinkingShown = false
+	}
+
 	// Render final markdown and bake it into content
 	if m.renderer != nil {
 		if r, err := m.renderer.Render(m.stream.String()); err == nil {
@@ -110,8 +120,6 @@ func (m *OutputModel) EndStream(width int) {
 	m.stream.Reset()
 	m.streaming = false
 	m.content.WriteString("\n")
-	m.content.WriteString(SeparatorClose(width))
-	m.content.WriteString("\n\n")
 	m.refreshViewport()
 }
 
@@ -146,15 +154,10 @@ func (m *OutputModel) Clear() {
 
 func (m *OutputModel) refreshViewport() {
 	if m.streaming && m.stream.Len() > 0 {
-		// Render LLM markdown and append to pre-styled content
-		raw := m.stream.String()
-		rendered := raw
-		if m.renderer != nil {
-			if r, err := m.renderer.Render(raw); err == nil {
-				rendered = r
-			}
-		}
-		m.viewport.SetContent(m.content.String() + rendered)
+		// During streaming, show raw text for smooth character-by-character output.
+		// Glamour re-renders the full buffer on every chunk which causes visible jumps.
+		// Final glamour render happens in EndStream.
+		m.viewport.SetContent(m.content.String() + m.stream.String())
 	} else {
 		m.viewport.SetContent(m.content.String())
 	}
@@ -165,17 +168,29 @@ func (m *OutputModel) refreshViewport() {
 
 // Update handles viewport messages.
 func (m OutputModel) Update(msg tea.Msg) (OutputModel, tea.Cmd) {
+	// Only track user-initiated scrolling (keys/mouse), not content changes
+	isScrollInput := false
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "up", "down", "pgup", "pgdown", "home", "end":
+			isScrollInput = true
+		}
+	case tea.MouseMsg:
+		isScrollInput = true
+	}
+
 	var cmd tea.Cmd
 	prevOffset := m.viewport.YOffset
 	m.viewport, cmd = m.viewport.Update(msg)
 
-	// If user scrolled up, disable auto-scroll
-	if m.viewport.YOffset < prevOffset {
-		m.autoScroll = false
-	}
-	// If at bottom, re-enable auto-scroll
-	if m.viewport.AtBottom() {
-		m.autoScroll = true
+	if isScrollInput {
+		if m.viewport.YOffset < prevOffset {
+			m.autoScroll = false
+		}
+		if m.viewport.AtBottom() {
+			m.autoScroll = true
+		}
 	}
 
 	return m, cmd

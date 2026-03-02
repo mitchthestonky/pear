@@ -111,6 +111,9 @@ func (m InputModel) Update(msg tea.Msg) (InputModel, tea.Cmd) {
 			if strings.HasPrefix(text, "/") {
 				parts := strings.SplitN(text, " ", 2)
 				cmd := strings.TrimPrefix(parts[0], "/")
+				if cmd == "" {
+					cmd = "help"
+				}
 				args := ""
 				if len(parts) > 1 {
 					args = parts[1]

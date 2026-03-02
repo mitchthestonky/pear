@@ -25,7 +25,7 @@ func WelcomeBanner(cfg *config.Config, width int) string {
 		`    ,`,
 		`   / \`,
 		`  /   \`,
-		` (  🍐 )`,
+		` (     )`,
 		`  \   /`,
 		`   \_/`,
 	}, "\n"))
@@ -60,7 +60,11 @@ func WelcomeBanner(cfg *config.Config, width int) string {
 
 	cmdsHeader := greenBold.Render("Commands")
 	cmds := strings.Join([]string{
+		dim.Render("/help") + "      show all commands",
+		dim.Render("/watch") + "     start file watcher",
+		dim.Render("/review") + "    review current changes",
 		dim.Render("/settings") + "  configure provider & model",
+		dim.Render("/status") + "    session info",
 		dim.Render("/clear") + "     reset conversation",
 		dim.Render("/quit") + "      exit",
 	}, "\n")

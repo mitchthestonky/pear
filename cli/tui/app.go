@@ -203,6 +203,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(cmds...)
 
 	case StreamErrorMsg:
+		m.output.EndStream(m.width)
 		m.output.AppendError(msg.Err.Error())
 		m.state = "idle"
 		m.input.SetEnabled(true)
