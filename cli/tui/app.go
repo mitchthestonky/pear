@@ -168,12 +168,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.input.SetEnabled(true)
 		m.stats.Reviews++
 
-		if msg.Response != nil && m.conceptStore != nil {
-			concepts, relationships := learning.Extract(msg.Response.Content)
-			if len(concepts) > 0 {
-				m.conceptStore.Record(concepts, relationships)
-				m.stats.Concepts += len(concepts)
-				_ = m.conceptStore.Save(m.learningPath)
+		if msg.Response != nil {
+			m.history = append(m.history, llm.Message{Role: "assistant", Content: msg.Response.Content})
+
+			if m.conceptStore != nil {
+				concepts, relationships := learning.Extract(msg.Response.Content)
+				if len(concepts) > 0 {
+					m.conceptStore.Record(concepts, relationships)
+					m.stats.Concepts += len(concepts)
+					_ = m.conceptStore.Save(m.learningPath)
+				}
 			}
 		}
 

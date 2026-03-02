@@ -84,7 +84,7 @@ func SeparatorOpen(width int) string {
 		width = labelLen + 6
 	}
 	side := (width - labelLen) / 2
-	line := repeat("━", side) + label + repeat("━", width-side-labelLen)
+	line := strings.Repeat("━", side) + label + strings.Repeat("━", width-side-labelLen)
 	return lipgloss.NewStyle().Foreground(colorGreen).Render(line)
 }
 
@@ -93,9 +93,7 @@ func SeparatorClose(width int) string {
 	if width < 6 {
 		width = 12
 	}
-	return lipgloss.NewStyle().Foreground(colorGreen).Render(repeat("━", width))
+	return lipgloss.NewStyle().Foreground(colorGreen).Render(strings.Repeat("━", width))
 }
 
-func repeat(s string, n int) string {
-	return strings.Repeat(s, n)
-}
+

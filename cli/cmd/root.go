@@ -32,6 +32,8 @@ var rootCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
+		_ = config.ResolveCodebase(cfg)
+
 		provider := config.ActiveProvider(cfg)
 		client, err := llm.NewClient(cfg.Provider.Active, llm.ProviderDetail{
 			APIKey: provider.APIKey,
@@ -41,8 +43,6 @@ var rootCmd = &cobra.Command{
 			fmt.Fprintf(os.Stderr, "Error creating LLM client: %v\n", err)
 			os.Exit(1)
 		}
-
-		_ = config.ResolveCodebase(cfg)
 
 		logsDir := filepath.Join(config.Dir(), "logs")
 		logger, _ := logging.NewLogger(logsDir)
