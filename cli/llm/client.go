@@ -52,7 +52,7 @@ func NewClient(provider string, detail ProviderDetail) (LLMClient, error) {
 	case "openai":
 		return NewOpenAIClient(detail), nil
 	case "openrouter":
-		return nil, fmt.Errorf("openrouter provider not yet implemented")
+		return NewOpenRouterClient(detail), nil
 	default:
 		return nil, fmt.Errorf("unknown provider: %s", provider)
 	}
