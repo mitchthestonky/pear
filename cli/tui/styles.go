@@ -1,8 +1,6 @@
 package tui
 
 import (
-	"strings"
-
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -11,8 +9,7 @@ var (
 	colorGreen  = lipgloss.AdaptiveColor{Light: "#2D6A2E", Dark: "#5FD75F"}
 	colorDim    = lipgloss.AdaptiveColor{Light: "#888888", Dark: "#777777"}
 	colorRed    = lipgloss.AdaptiveColor{Light: "#CC3333", Dark: "#FF5555"}
-	colorYellow = lipgloss.AdaptiveColor{Light: "#BB8800", Dark: "#FFCC00"}
-	colorBlue   = lipgloss.AdaptiveColor{Light: "#2255CC", Dark: "#5599FF"}
+	colorBlue = lipgloss.AdaptiveColor{Light: "#2255CC", Dark: "#5599FF"}
 	colorCyan   = lipgloss.AdaptiveColor{Light: "#117777", Dark: "#55DDDD"}
 )
 
@@ -37,11 +34,6 @@ var ConceptStyle = lipgloss.NewStyle().
 var RelatedStyle = lipgloss.NewStyle().
 	Foreground(colorCyan)
 
-// QuestionStyle for Socratic questions (🤔 ...)
-var QuestionStyle = lipgloss.NewStyle().
-	Foreground(colorYellow).
-	Italic(true)
-
 // ErrorStyle for inline errors (⚠ ...) — red/warning
 var ErrorStyle = lipgloss.NewStyle().
 	Foreground(colorRed).
@@ -51,11 +43,6 @@ var ErrorStyle = lipgloss.NewStyle().
 var SystemStyle = lipgloss.NewStyle().
 	Foreground(colorDim).
 	Italic(true)
-
-// InputPromptStyle for the "> " prompt
-var InputPromptStyle = lipgloss.NewStyle().
-	Foreground(colorGreen).
-	Bold(true)
 
 // AutocompleteStyle for the @file dropdown box
 var AutocompleteStyle = lipgloss.NewStyle().
@@ -85,25 +72,5 @@ var UserMessageStyle = lipgloss.NewStyle().
 var ThinkingStyle = lipgloss.NewStyle().
 	Foreground(colorDim).
 	Italic(true)
-
-// SeparatorOpen renders ━━━ Pear ━━━
-func SeparatorOpen(width int) string {
-	label := " Pear "
-	labelLen := len(label)
-	if width < labelLen+6 {
-		width = labelLen + 6
-	}
-	side := (width - labelLen) / 2
-	line := strings.Repeat("━", side) + label + strings.Repeat("━", width-side-labelLen)
-	return lipgloss.NewStyle().Foreground(colorGreen).Render(line)
-}
-
-// SeparatorClose renders ━━━━━━━━━━━━
-func SeparatorClose(width int) string {
-	if width < 6 {
-		width = 12
-	}
-	return lipgloss.NewStyle().Foreground(colorGreen).Render(strings.Repeat("━", width))
-}
 
 
