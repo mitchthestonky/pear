@@ -52,7 +52,7 @@ var rootCmd = &cobra.Command{
 		}
 
 		m := tui.NewModel(cfg, client, "interactive", nil)
-		p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithFilter(tui.FilterUnknown))
+		p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion(), tea.WithFilter(tui.FilterUnknown))
 		if _, err := p.Run(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)

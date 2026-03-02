@@ -307,9 +307,11 @@ func (m Model) renderBottom() string {
 }
 
 // syncViewportHeight recalculates the viewport height from the rendered chrome.
+// Measures a placeholder View to get the exact chrome lines, avoiding magic numbers.
 func (m *Model) syncViewportHeight() {
-	chrome := lipgloss.Height(m.renderHeader()) + lipgloss.Height(m.renderBottom())
-	vpHeight := m.height - chrome
+	bottom := m.renderBottom()
+	bottomLines := strings.Count(bottom, "\n") + 1
+	vpHeight := m.height - 1 - bottomLines // 1 = header line
 	if vpHeight < 1 {
 		vpHeight = 1
 	}
