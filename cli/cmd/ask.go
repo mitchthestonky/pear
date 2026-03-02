@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/pearcode/pear/llm"
 	"github.com/pearcode/pear/config"
+	"github.com/pearcode/pear/llm"
+	"github.com/pearcode/pear/prompt"
+	"github.com/pearcode/pear/repocontext"
 	"github.com/spf13/cobra"
 )
 
@@ -29,11 +31,23 @@ var askCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		systemPrompt := "You are Pear, a teaching-first coding companion. Teach concepts, not just answers."
-
-		messages := []llm.Message{
-			{Role: "user", Content: question},
+		profile := prompt.UserProfile{
+			Name:      cfg.Name,
+			Languages: cfg.Languages,
+			Level:     cfg.Level,
 		}
+
+		rctx, _ := repocontext.Build(repocontext.CollectOpts{
+			TriggerType: "user",
+			TriggerInfo: "pear ask",
+		})
+		if rctx == nil {
+			rctx = &repocontext.RepoContext{}
+		}
+
+		systemPrompt, messages := prompt.Reactive(rctx, profile, []llm.Message{
+			{Role: "user", Content: question},
+		})
 
 		opts := llm.StreamOptions{
 			SystemPrompt: systemPrompt,
