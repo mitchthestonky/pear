@@ -67,6 +67,7 @@ func (m *OutputModel) SetSize(width, height int) {
 // AppendHeader adds a styled header line.
 func (m *OutputModel) AppendHeader(text string) {
 	m.bannerOnly = false
+	m.content.WriteString("\n")
 	m.content.WriteString(TriggerStyle.Render(text))
 	m.content.WriteString("\n")
 	m.refreshViewport()
