@@ -49,14 +49,14 @@ func NewInputModel() InputModel {
 	}
 }
 
-// SetEnabled enables/disables input.
-func (m *InputModel) SetEnabled(enabled bool) {
+// SetEnabled enables/disables input and returns a tea.Cmd for focus.
+func (m *InputModel) SetEnabled(enabled bool) tea.Cmd {
 	m.enabled = enabled
 	if enabled {
-		m.textinput.Focus()
-	} else {
-		m.textinput.Blur()
+		return m.textinput.Focus()
 	}
+	m.textinput.Blur()
+	return nil
 }
 
 // Update handles input messages.

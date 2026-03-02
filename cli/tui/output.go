@@ -6,6 +6,9 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/glamour"
+	"github.com/charmbracelet/glamour/ansi"
+	"github.com/charmbracelet/glamour/styles"
+	"github.com/charmbracelet/lipgloss"
 )
 
 // OutputModel is a scrollable viewport that renders streaming markdown.
@@ -28,7 +31,7 @@ func NewOutputModel(width, height int) OutputModel {
 	vp.SetContent("")
 
 	r, _ := glamour.NewTermRenderer(
-		glamour.WithAutoStyle(),
+		glamour.WithStyles(glamourStyle()),
 		glamour.WithWordWrap(width-4),
 	)
 
@@ -49,7 +52,7 @@ func (m *OutputModel) SetSize(width, height int) {
 	m.viewport.Height = height
 	if m.renderer != nil {
 		m.renderer, _ = glamour.NewTermRenderer(
-			glamour.WithAutoStyle(),
+			glamour.WithStyles(glamourStyle()),
 			glamour.WithWordWrap(width-4),
 		)
 	}
@@ -134,6 +137,34 @@ func (m *OutputModel) EndStream(width int) {
 	m.refreshViewport()
 }
 
+// AppendConcepts adds concept tags after a response.
+func (m *OutputModel) AppendConcepts(concepts []string) {
+	if len(concepts) == 0 {
+		return
+	}
+	m.bannerOnly = false
+	m.content.WriteString(ConceptStyle.Render("📚 Concepts: [" + strings.Join(concepts, ", ") + "]"))
+	m.content.WriteString("\n")
+	m.refreshViewport()
+}
+
+// AppendRelationships adds relationship tags after a response.
+func (m *OutputModel) AppendRelationships(relationships map[string][]string) {
+	if len(relationships) == 0 {
+		return
+	}
+	m.bannerOnly = false
+	var pairs []string
+	for from, tos := range relationships {
+		for _, to := range tos {
+			pairs = append(pairs, from+" → "+to)
+		}
+	}
+	m.content.WriteString(RelatedStyle.Render("🔗 Related: [" + strings.Join(pairs, ", ") + "]"))
+	m.content.WriteString("\n")
+	m.refreshViewport()
+}
+
 // AppendError adds an error message.
 func (m *OutputModel) AppendError(text string) {
 	m.bannerOnly = false
@@ -213,4 +244,18 @@ func (m OutputModel) Update(msg tea.Msg) (OutputModel, tea.Cmd) {
 // View renders the viewport.
 func (m OutputModel) View() string {
 	return m.viewport.View()
+}
+
+// glamourStyle returns a glamour style config that uses the terminal's default
+// text color instead of hardcoded grays. This ensures black text on light
+// backgrounds and white text on dark backgrounds.
+func glamourStyle() ansi.StyleConfig {
+	if lipgloss.HasDarkBackground() {
+		s := styles.DarkStyleConfig
+		s.Document.Color = nil // use terminal default
+		return s
+	}
+	s := styles.LightStyleConfig
+	s.Document.Color = nil // use terminal default (black on light bg)
+	return s
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/pearcode/pear/config"
 	"github.com/pearcode/pear/learning"
 	"github.com/pearcode/pear/llm"
@@ -29,6 +30,7 @@ type ChunkMsg struct{ Text string }
 type StreamDoneMsg struct{ Response *llm.Response }
 type StreamErrorMsg struct{ Err error }
 type ReviewTriggerMsg struct{ Trigger ReviewTrigger }
+type listenTickMsg struct{}
 
 // SessionStats tracks session metrics.
 type SessionStats struct {
@@ -66,6 +68,7 @@ type Model struct {
 	settings     settingsState
 	watcher      *watcher.Watcher
 	watchCancel  context.CancelFunc
+	listenDots   int // 0-3, cycles for "Pear is listening" animation
 }
 
 // NewModel creates a new TUI model.
@@ -101,6 +104,9 @@ func (m Model) Init() tea.Cmd {
 	if m.triggers != nil {
 		cmds = append(cmds, waitForTrigger(m.triggers))
 	}
+	if m.mode == "watch" {
+		cmds = append(cmds, listenTick())
+	}
 	return tea.Batch(cmds...)
 }
 
@@ -112,9 +118,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		outputHeight := m.height - 3 // reserve space for input
+		outputHeight := m.height - m.inputHeight()
 		m.output.SetSize(m.width, outputHeight)
-		m.output.refreshViewport()
 		return m, nil
 
 	case tea.KeyMsg:
@@ -137,10 +142,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.output.AppendSystem("⏸ Proactive reviews paused. Ctrl+P to resume.")
 				} else {
 					m.output.AppendSystem("▶ Proactive reviews resumed.")
+					return m, listenTick()
 				}
 				return m, nil
 			}
 		}
+
+	case listenTickMsg:
+		if m.mode == "watch" && m.state == "idle" && !m.paused {
+			m.listenDots = (m.listenDots + 1) % 4
+			return m, listenTick()
+		}
+		return m, nil
 
 	case ReviewTriggerMsg:
 		if m.paused {
@@ -173,7 +186,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case StreamDoneMsg:
 		m.output.EndStream(m.width)
 		m.state = "idle"
-		m.input.SetEnabled(true)
+		if cmd := m.input.SetEnabled(true); cmd != nil {
+			cmds = append(cmds, cmd)
+		}
 		m.stats.Reviews++
 
 		if msg.Response != nil {
@@ -187,6 +202,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.conceptStore != nil {
 				concepts, relationships := learning.Extract(msg.Response.Content)
 				if len(concepts) > 0 {
+					m.output.AppendConcepts(concepts)
+					m.output.AppendRelationships(relationships)
 					m.conceptStore.Record(concepts, relationships)
 					m.stats.Concepts += len(concepts)
 					_ = m.conceptStore.Save(m.learningPath)
@@ -194,7 +211,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
-		var cmds []tea.Cmd
 		if m.queuedTrig != nil {
 			t := *m.queuedTrig
 			m.queuedTrig = nil
@@ -203,17 +219,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.triggers != nil {
 			cmds = append(cmds, waitForTrigger(m.triggers))
 		}
+		if m.mode == "watch" {
+			cmds = append(cmds, listenTick())
+		}
 		return m, tea.Batch(cmds...)
 
 	case StreamErrorMsg:
 		m.output.EndStream(m.width)
 		m.output.AppendError(msg.Err.Error())
 		m.state = "idle"
-		m.input.SetEnabled(true)
-		if m.triggers != nil {
-			return m, waitForTrigger(m.triggers)
+		if cmd := m.input.SetEnabled(true); cmd != nil {
+			cmds = append(cmds, cmd)
 		}
-		return m, nil
+		if m.triggers != nil {
+			cmds = append(cmds, waitForTrigger(m.triggers))
+		}
+		if m.mode == "watch" {
+			cmds = append(cmds, listenTick())
+		}
+		return m, tea.Batch(cmds...)
 	}
 
 	// Forward to sub-models
@@ -222,9 +246,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
-	m.output, cmd = m.output.Update(msg)
-	if cmd != nil {
-		cmds = append(cmds, cmd)
+
+	// Only forward scroll-relevant messages to the viewport to prevent
+	// typing and other keys from causing viewport jumps.
+	if isScrollMsg(msg) {
+		m.output, cmd = m.output.Update(msg)
+		if cmd != nil {
+			cmds = append(cmds, cmd)
+		}
 	}
 
 	return m, tea.Batch(cmds...)
@@ -247,22 +276,35 @@ func (m Model) View() string {
 	b.WriteString(m.output.View())
 	b.WriteString("\n")
 
-	// Input
-	inputView := m.input.View()
-	b.WriteString(inputView)
+	// Bordered input box
+	inputBox := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(colorDim).
+		Width(m.width - 2).
+		Render(m.input.View())
+	b.WriteString(inputBox)
 
-	// Pad to fill terminal height to prevent alt screen artifacts on resize
-	lines := strings.Count(b.String(), "\n") + 1
-	if pad := m.height - lines; pad > 0 {
-		b.WriteString(strings.Repeat("\n", pad))
+	// Status line below input
+	var status string
+	if m.mode == "watch" && m.state == "idle" && !m.paused {
+		dots := strings.Repeat(".", m.listenDots)
+		pad := strings.Repeat(" ", 3-m.listenDots)
+		status = lipgloss.NewStyle().Foreground(colorGreen).Italic(true).Render(
+			fmt.Sprintf(" 🍐 Pear is listening%s%s", dots, pad))
+	} else if m.state == "streaming" {
+		status = ThinkingStyle.Render(" Pear is thinking...")
+	} else if m.paused {
+		status = ThinkingStyle.Render(" ⏸ Paused")
 	}
+	b.WriteString("\n")
+	b.WriteString(status)
 
 	return b.String()
 }
 
 func (m *Model) handleTrigger(trigger ReviewTrigger) tea.Cmd {
 	m.state = "streaming"
-	m.input.SetEnabled(false)
+	_ = m.input.SetEnabled(false)
 
 	m.output.AppendHeader(fmt.Sprintf("🍐 Pear noticed you %s", trigger.Info))
 	m.output.AppendContext(fmt.Sprintf("git diff, %s", repocontext.DiffSummary(trigger.Diff)))
@@ -288,7 +330,7 @@ func (m *Model) handleTrigger(trigger ReviewTrigger) tea.Cmd {
 
 func (m *Model) handleUserInput(msg SubmitMsg) tea.Cmd {
 	m.state = "streaming"
-	m.input.SetEnabled(false)
+	_ = m.input.SetEnabled(false)
 
 	m.output.AppendUserMessage(msg.Text)
 	m.history = append(m.history, llm.Message{Role: "user", Content: msg.Text})
@@ -364,6 +406,7 @@ func (m *Model) handleSlash(msg SlashMsg) tea.Cmd {
 		}
 		m.paused = false
 		m.output.AppendSystem("🍐 Proactive reviews resumed.")
+		return listenTick()
 
 	case "status":
 		uptime := time.Since(m.stats.StartTime).Truncate(time.Second)
@@ -682,6 +725,39 @@ func formatWatchTriggerInfo(wt watcher.ReviewTrigger) string {
 	default:
 		return wt.Summary
 	}
+}
+
+func isScrollMsg(msg tea.Msg) bool {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "up", "down", "pgup", "pgdown", "home", "end":
+			return true
+		}
+	case tea.MouseMsg:
+		return true
+	}
+	return false
+}
+
+// inputHeight returns the number of terminal lines the input area occupies.
+// 1 header + 1 border-top + 1 input + 1 border-bottom + 1 status = 5
+func (m Model) inputHeight() int {
+	h := 5 // header + bordered input (3 lines) + status line
+	if m.input.autocomplete.active && len(m.input.autocomplete.matches) > 0 {
+		n := len(m.input.autocomplete.matches)
+		if n > 5 {
+			n = 5
+		}
+		h += n + 2 // matches + border
+	}
+	return h
+}
+
+func listenTick() tea.Cmd {
+	return tea.Tick(500*time.Millisecond, func(time.Time) tea.Msg {
+		return listenTickMsg{}
+	})
 }
 
 func waitForTrigger(ch <-chan ReviewTrigger) tea.Cmd {
