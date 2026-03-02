@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"os"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/pearcode/pear/config"
+	"github.com/pearcode/pear/llm"
+	"github.com/pearcode/pear/tui"
 	"github.com/spf13/cobra"
 )
 
@@ -21,7 +24,30 @@ var rootCmd = &cobra.Command{
 		}
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("not implemented yet")
+		cfg, err := config.Load()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
+			os.Exit(1)
+		}
+
+		provider := config.ActiveProvider(cfg)
+		client, err := llm.NewClient(cfg.Provider.Active, llm.ProviderDetail{
+			APIKey: provider.APIKey,
+			Model:  provider.Model,
+		})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error creating LLM client: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Printf("🍐 Pear v0 · interactive · %s/%s\n", cfg.Provider.Active, provider.Model)
+
+		m := tui.NewModel(cfg, client, "interactive", nil)
+		p := tea.NewProgram(m, tea.WithAltScreen())
+		if _, err := p.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
 	},
 }
 
