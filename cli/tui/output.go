@@ -11,7 +11,9 @@ import (
 // OutputModel is a scrollable viewport that renders streaming markdown.
 type OutputModel struct {
 	viewport   viewport.Model
-	content    *strings.Builder
+	content    *strings.Builder // pre-styled UI content (banner, headers, separators)
+	stream     *strings.Builder // raw LLM markdown accumulated during streaming
+	streaming  bool             // whether we're currently in a stream block
 	renderer   *glamour.TermRenderer
 	autoScroll bool
 	width      int
@@ -30,6 +32,7 @@ func NewOutputModel(width, height int) OutputModel {
 	return OutputModel{
 		viewport:   vp,
 		content:    &strings.Builder{},
+		stream:     &strings.Builder{},
 		renderer:   r,
 		autoScroll: true,
 		width:      width,
@@ -60,17 +63,31 @@ func (m *OutputModel) AppendHeader(text string) {
 func (m *OutputModel) StartStream(width int) {
 	m.content.WriteString(SeparatorOpen(width))
 	m.content.WriteString("\n")
+	m.stream.Reset()
+	m.streaming = true
 	m.refreshViewport()
 }
 
 // AppendChunk adds a streaming chunk and re-renders.
 func (m *OutputModel) AppendChunk(text string) {
-	m.content.WriteString(text)
+	m.stream.WriteString(text)
 	m.refreshViewport()
 }
 
 // EndStream adds a closing separator.
 func (m *OutputModel) EndStream(width int) {
+	// Render final markdown and bake it into content
+	if m.renderer != nil {
+		if r, err := m.renderer.Render(m.stream.String()); err == nil {
+			m.content.WriteString(r)
+		} else {
+			m.content.WriteString(m.stream.String())
+		}
+	} else {
+		m.content.WriteString(m.stream.String())
+	}
+	m.stream.Reset()
+	m.streaming = false
 	m.content.WriteString("\n")
 	m.content.WriteString(SeparatorClose(width))
 	m.content.WriteString("\n\n")
@@ -79,7 +96,7 @@ func (m *OutputModel) EndStream(width int) {
 
 // AppendError adds an error message.
 func (m *OutputModel) AppendError(text string) {
-	m.content.WriteString(ErrorStyle.Render("⚠ "+text))
+	m.content.WriteString(ErrorStyle.Render("⚠ " + text))
 	m.content.WriteString("\n")
 	m.refreshViewport()
 }
@@ -93,7 +110,7 @@ func (m *OutputModel) AppendSystem(text string) {
 
 // AppendContext adds a context line.
 func (m *OutputModel) AppendContext(text string) {
-	m.content.WriteString(ContextStyle.Render("📎 Context: "+text))
+	m.content.WriteString(ContextStyle.Render("📎 Context: " + text))
 	m.content.WriteString("\n")
 	m.refreshViewport()
 }
@@ -101,18 +118,25 @@ func (m *OutputModel) AppendContext(text string) {
 // Clear resets the output content.
 func (m *OutputModel) Clear() {
 	m.content.Reset()
+	m.stream.Reset()
+	m.streaming = false
 	m.refreshViewport()
 }
 
 func (m *OutputModel) refreshViewport() {
-	raw := m.content.String()
-	rendered := raw
-	if m.renderer != nil {
-		if r, err := m.renderer.Render(raw); err == nil {
-			rendered = r
+	if m.streaming && m.stream.Len() > 0 {
+		// Render LLM markdown and append to pre-styled content
+		raw := m.stream.String()
+		rendered := raw
+		if m.renderer != nil {
+			if r, err := m.renderer.Render(raw); err == nil {
+				rendered = r
+			}
 		}
+		m.viewport.SetContent(m.content.String() + rendered)
+	} else {
+		m.viewport.SetContent(m.content.String())
 	}
-	m.viewport.SetContent(rendered)
 	if m.autoScroll {
 		m.viewport.GotoBottom()
 	}
