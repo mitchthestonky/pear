@@ -104,7 +104,14 @@ func (m *OutputModel) Clear() {
 }
 
 func (m *OutputModel) refreshViewport() {
-	m.viewport.SetContent(m.content.String())
+	raw := m.content.String()
+	rendered := raw
+	if m.renderer != nil {
+		if r, err := m.renderer.Render(raw); err == nil {
+			rendered = r
+		}
+	}
+	m.viewport.SetContent(rendered)
 	if m.autoScroll {
 		m.viewport.GotoBottom()
 	}

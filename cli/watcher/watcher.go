@@ -336,9 +336,49 @@ func subtractDiff(current, previous string) string {
 	if current == previous {
 		return ""
 	}
-	// Simple approach: if current starts with previous content, return the rest.
-	// Otherwise return full current diff (conservative).
-	return current
+
+	// Split into per-file chunks keyed by diff header
+	prevChunks := splitDiffChunks(previous)
+	curChunks := splitDiffChunks(current)
+
+	var result []string
+	for _, chunk := range curChunks {
+		header := chunkHeader(chunk)
+		if prev, ok := prevChunks[header]; ok && prev == chunk {
+			continue // identical chunk already reviewed
+		}
+		result = append(result, chunk)
+	}
+
+	if len(result) == 0 {
+		return ""
+	}
+	return strings.Join(result, "")
+}
+
+func splitDiffChunks(diff string) map[string]string {
+	chunks := make(map[string]string)
+	parts := strings.Split(diff, "\ndiff --git ")
+	for i, part := range parts {
+		if i == 0 {
+			if strings.HasPrefix(part, "diff --git ") {
+				part = part[len("diff --git "):]
+			} else {
+				continue
+			}
+		}
+		full := "diff --git " + part
+		header := chunkHeader(full)
+		chunks[header] = full
+	}
+	return chunks
+}
+
+func chunkHeader(chunk string) string {
+	if idx := strings.Index(chunk, "\n"); idx != -1 {
+		return chunk[:idx]
+	}
+	return chunk
 }
 
 func diffSummary(diff string) string {

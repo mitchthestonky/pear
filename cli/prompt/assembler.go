@@ -106,11 +106,10 @@ func Proactive(ctx *repocontext.RepoContext, profile UserProfile, history []llm.
 func Reactive(ctx *repocontext.RepoContext, profile UserProfile, history []llm.Message) (string, []llm.Message) {
 	system := fmt.Sprintf(reactiveSystem, profile.Name, profile.Languages, profile.Level)
 
-	var msgs []llm.Message
-	msgs = append(msgs, history...)
+	msgs := make([]llm.Message, len(history))
+	copy(msgs, history)
 
 	contextBlock := FormatContext(ctx)
-	// Last message in history should be the user's question; prepend context to it
 	if len(msgs) > 0 && msgs[len(msgs)-1].Role == "user" {
 		msgs[len(msgs)-1].Content = contextBlock + "\n\n" + msgs[len(msgs)-1].Content
 	} else {

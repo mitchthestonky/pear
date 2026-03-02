@@ -1,11 +1,15 @@
 package cmd
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
+	"time"
 
 	"github.com/pearcode/pear/config"
+	"github.com/pearcode/pear/llm"
 	"github.com/spf13/cobra"
 )
 
@@ -59,9 +63,31 @@ func RunDoctor() bool {
 		allPassed = false
 	}
 
-	// Check 4: LLM test request (stubbed until LLM package is ready)
-	// TODO: implement when llm package is available (ticket 02-01)
-	fmt.Println("- LLM connection: skipped (not yet implemented)")
+	// Check 4: LLM test request
+	if cfg != nil && config.ActiveProvider(cfg).APIKey != "" {
+		client, cerr := newLLMClient(cfg)
+		if cerr != nil {
+			fmt.Printf("✗ LLM connection: %v\n", cerr)
+			allPassed = false
+		} else {
+			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+			defer cancel()
+			_, cerr = client.Stream(ctx, []llm.Message{{Role: "user", Content: "Respond with OK"}}, llm.StreamOptions{MaxTokens: 10}, func(string) {})
+			if cerr != nil {
+				var llmErr *llm.LLMError
+				if errors.As(cerr, &llmErr) && llmErr.Code == "auth" {
+					fmt.Println("✗ LLM connection: invalid API key")
+				} else {
+					fmt.Printf("✗ LLM connection: %v\n", cerr)
+				}
+				allPassed = false
+			} else {
+				fmt.Println("✓ LLM connection: valid")
+			}
+		}
+	} else {
+		fmt.Println("- LLM connection: skipped (no API key)")
+	}
 
 	return allPassed
 }

@@ -46,7 +46,7 @@ type settingsState struct {
 // Model is the main Bubble Tea model.
 type Model struct {
 	input      InputModel
-	output     OutputModel
+	output     *OutputModel
 	mode       string // "interactive" or "watch"
 	state      string // "idle", "streaming"
 	paused     bool
@@ -78,7 +78,7 @@ func NewModel(cfg *config.Config, client llm.LLMClient, mode string, triggers <-
 
 	return Model{
 		input:        NewInputModel(),
-		output:       output,
+		output:       &output,
 		mode:         mode,
 		state:        "idle",
 		config:       cfg,
@@ -215,7 +215,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
-	m.output, cmd = m.output.Update(msg)
+	updated, cmd := m.output.Update(msg)
+	m.output = &updated
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}

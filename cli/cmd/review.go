@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/pearcode/pear/config"
+	"github.com/pearcode/pear/learning"
 	"github.com/pearcode/pear/llm"
 	"github.com/pearcode/pear/prompt"
 	"github.com/pearcode/pear/repocontext"
@@ -74,12 +76,22 @@ var reviewCmd = &cobra.Command{
 
 		printSeparator()
 
-		_, err = llm.StreamWithRetry(context.Background(), client, messages, streamOpts, func(chunk string) {
+		resp, err := llm.StreamWithRetry(context.Background(), client, messages, streamOpts, func(chunk string) {
 			fmt.Print(chunk)
 		})
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "\nError: %v\n", err)
 			os.Exit(1)
+		}
+
+		if resp != nil {
+			lpath := filepath.Join(config.Dir(), "learning.json")
+			store, _ := learning.Load(lpath)
+			concepts, relationships := learning.Extract(resp.Content)
+			if len(concepts) > 0 {
+				store.Record(concepts, relationships)
+				_ = store.Save(lpath)
+			}
 		}
 
 		fmt.Println()

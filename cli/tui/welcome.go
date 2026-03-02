@@ -111,9 +111,3 @@ func cwd() string {
 	return filepath.Clean(dir)
 }
 
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
