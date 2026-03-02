@@ -67,7 +67,7 @@ func Save(cfg *Config) error {
 	}
 
 	tmp := configPath() + ".tmp"
-	f, err := os.Create(tmp)
+	f, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return fmt.Errorf("creating temp config: %w", err)
 	}
@@ -76,6 +76,11 @@ func Save(cfg *Config) error {
 		f.Close()
 		os.Remove(tmp)
 		return fmt.Errorf("encoding config: %w", err)
+	}
+	if err := f.Sync(); err != nil {
+		f.Close()
+		os.Remove(tmp)
+		return fmt.Errorf("syncing config: %w", err)
 	}
 	f.Close()
 
