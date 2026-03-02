@@ -11,7 +11,7 @@ import (
 // OutputModel is a scrollable viewport that renders streaming markdown.
 type OutputModel struct {
 	viewport   viewport.Model
-	content    strings.Builder
+	content    *strings.Builder
 	renderer   *glamour.TermRenderer
 	autoScroll bool
 	width      int
@@ -29,6 +29,7 @@ func NewOutputModel(width, height int) OutputModel {
 
 	return OutputModel{
 		viewport:   vp,
+		content:    &strings.Builder{},
 		renderer:   r,
 		autoScroll: true,
 		width:      width,
