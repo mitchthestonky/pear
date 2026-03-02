@@ -28,6 +28,7 @@ type ChunkMsg struct{ Text string }
 type StreamDoneMsg struct{ Response *llm.Response }
 type StreamErrorMsg struct{ Err error }
 type ReviewTriggerMsg struct{ Trigger ReviewTrigger }
+type initMsg struct{}
 
 // SessionStats tracks session metrics.
 type SessionStats struct {
@@ -46,7 +47,7 @@ type settingsState struct {
 // Model is the main Bubble Tea model.
 type Model struct {
 	input      InputModel
-	output     *OutputModel
+	output     OutputModel
 	mode       string // "interactive" or "watch"
 	state      string // "idle", "streaming"
 	paused     bool
@@ -69,16 +70,9 @@ type Model struct {
 func NewModel(cfg *config.Config, client llm.LLMClient, mode string, triggers <-chan ReviewTrigger) Model {
 	lpath := filepath.Join(config.Dir(), "learning.json")
 	store, _ := learning.Load(lpath)
-	output := NewOutputModel(80, 20)
-
-	// Write welcome banner here (not in Init) because Init has a value receiver
-	banner := WelcomeBanner(cfg, 80)
-	output.content.WriteString(banner)
-	output.refreshViewport()
-
 	return Model{
 		input:        NewInputModel(),
-		output:       &output,
+		output:       NewOutputModel(80, 20),
 		mode:         mode,
 		state:        "idle",
 		config:       cfg,
@@ -95,6 +89,7 @@ func NewModel(cfg *config.Config, client llm.LLMClient, mode string, triggers <-
 // Init initializes the model.
 func (m Model) Init() tea.Cmd {
 	var cmds []tea.Cmd
+	cmds = append(cmds, func() tea.Msg { return initMsg{} })
 	cmds = append(cmds, m.input.textinput.Focus())
 	if m.triggers != nil {
 		cmds = append(cmds, waitForTrigger(m.triggers))
@@ -107,6 +102,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
+	case initMsg:
+		banner := WelcomeBanner(m.config, m.width)
+		m.output.content.WriteString(banner)
+		m.output.refreshViewport()
+		return m, nil
+
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
@@ -215,8 +216,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
-	updated, cmd := m.output.Update(msg)
-	m.output = &updated
+	m.output, cmd = m.output.Update(msg)
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
