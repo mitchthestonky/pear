@@ -40,7 +40,7 @@ type InputModel struct {
 func NewInputModel() InputModel {
 	ti := textinput.New()
 	ti.Placeholder = "Ask a question or type /help..."
-	ti.Prompt = InputPromptStyle.Render("> ")
+	ti.Prompt = "> "
 	ti.Focus()
 
 	return InputModel{

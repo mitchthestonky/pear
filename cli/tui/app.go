@@ -69,9 +69,16 @@ type Model struct {
 func NewModel(cfg *config.Config, client llm.LLMClient, mode string, triggers <-chan ReviewTrigger) Model {
 	lpath := filepath.Join(config.Dir(), "learning.json")
 	store, _ := learning.Load(lpath)
+	output := NewOutputModel(80, 20)
+
+	// Write welcome banner here (not in Init) because Init has a value receiver
+	banner := WelcomeBanner(cfg, 80)
+	output.content.WriteString(banner)
+	output.refreshViewport()
+
 	return Model{
 		input:        NewInputModel(),
-		output:       NewOutputModel(80, 20),
+		output:       output,
 		mode:         mode,
 		state:        "idle",
 		config:       cfg,
@@ -87,11 +94,6 @@ func NewModel(cfg *config.Config, client llm.LLMClient, mode string, triggers <-
 
 // Init initializes the model.
 func (m Model) Init() tea.Cmd {
-	// Show welcome banner as initial content
-	banner := WelcomeBanner(m.config, m.width)
-	m.output.content.WriteString(banner)
-	m.output.refreshViewport()
-
 	var cmds []tea.Cmd
 	cmds = append(cmds, m.input.textinput.Focus())
 	if m.triggers != nil {
@@ -170,6 +172,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		if msg.Response != nil {
 			m.history = append(m.history, llm.Message{Role: "assistant", Content: msg.Response.Content})
+
+			const maxHistory = 50
+			if len(m.history) > maxHistory {
+				m.history = m.history[len(m.history)-maxHistory:]
+			}
 
 			if m.conceptStore != nil {
 				concepts, relationships := learning.Extract(msg.Response.Content)
