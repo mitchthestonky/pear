@@ -57,6 +57,7 @@ type Model struct {
 	width      int
 	height     int
 	cancelFn   context.CancelFunc
+	chunkCh    <-chan string
 	settings   settingsState
 }
 
@@ -151,7 +152,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case ChunkMsg:
 		m.output.AppendChunk(msg.Text)
-		return m, nil
+		return m, waitForChunk(m.chunkCh)
 
 	case StreamDoneMsg:
 		m.output.EndStream(m.width)
@@ -545,15 +546,30 @@ func (m *Model) startStream(systemPrompt string, messages []llm.Message) tea.Cmd
 	ctx, cancel := context.WithCancel(context.Background())
 	m.cancelFn = cancel
 
-	return func() tea.Msg {
+	ch := make(chan string, 64)
+	m.chunkCh = ch
+
+	streamCmd := func() tea.Msg {
 		resp, err := client.Stream(ctx, messages, opts, func(chunk string) {
-			// We need to send chunks via the program; for now we accumulate
+			ch <- chunk
 		})
-		_ = cancel
+		close(ch)
 		if err != nil {
 			return StreamErrorMsg{Err: err}
 		}
 		return StreamDoneMsg{Response: resp}
+	}
+
+	return tea.Batch(streamCmd, waitForChunk(ch))
+}
+
+func waitForChunk(ch <-chan string) tea.Cmd {
+	return func() tea.Msg {
+		chunk, ok := <-ch
+		if !ok {
+			return nil
+		}
+		return ChunkMsg{Text: chunk}
 	}
 }
 
