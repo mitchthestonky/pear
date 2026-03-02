@@ -58,7 +58,8 @@ type Model struct {
 	settings     settingsState
 	watcher      *watcher.Watcher
 	watchCancel  context.CancelFunc
-	listenDots   int // 0-3, cycles for "Pear is listening" animation
+	listenDots        int // 0-3, cycles for "Pear is listening" animation
+	consecutiveErrors int // tracks consecutive LLM errors for graceful degradation
 }
 
 // NewModel creates a new TUI model.
@@ -148,6 +149,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.paused {
 			return m, waitForTrigger(m.triggers)
 		}
+		if m.mode == "watch" && m.consecutiveErrors >= 3 {
+			// Silently drop triggers during sustained LLM outage
+			return m, waitForTrigger(m.triggers)
+		}
 		if m.state == "streaming" {
 			t := msg.Trigger
 			m.queuedTrig = &t
@@ -156,6 +161,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.handleTrigger(msg.Trigger)
 
 	case SubmitMsg:
+		m.consecutiveErrors = 0
 		if m.state == "streaming" {
 			return m, nil
 		}
@@ -175,6 +181,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case StreamDoneMsg:
 		m.output.EndStream(m.width)
 		m.state = "idle"
+		m.consecutiveErrors = 0
 		if cmd := m.input.SetEnabled(true); cmd != nil {
 			cmds = append(cmds, cmd)
 		}
@@ -215,7 +222,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case StreamErrorMsg:
 		m.output.EndStream(m.width)
-		m.output.AppendError(msg.Err.Error())
+		m.consecutiveErrors++
+		if m.consecutiveErrors >= 3 {
+			m.output.AppendError("⚠ LLM unavailable — Pear will retry when you make changes. Type /status to check.")
+		} else {
+			m.output.AppendError(msg.Err.Error())
+		}
 		m.state = "idle"
 		if cmd := m.input.SetEnabled(true); cmd != nil {
 			cmds = append(cmds, cmd)
