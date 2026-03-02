@@ -32,7 +32,11 @@ Rules:
 - Do NOT end with a question or quiz — just deliver the insight
 - Do NOT use Socratic prompts or test the user
 - Calibrate depth to the developer's level
-- Connect observations to broader patterns when relevant`
+- Connect observations to broader patterns when relevant
+
+At the end of your response, add concept tags on separate lines:
+📚 Concepts: [concept1, concept2, ...]
+🔗 Related: [concept1 → concept2, concept3 → concept4]`
 
 const reactiveSystem = `You are Pear, a pair programmer helping a developer with their question.
 
@@ -50,7 +54,11 @@ Rules:
 - Explain the why, not just the what
 - Do NOT end with a question or quiz — just deliver the answer
 - Do NOT use Socratic prompts or test the user
-- Calibrate depth to the developer's level`
+- Calibrate depth to the developer's level
+
+At the end of your response, add concept tags on separate lines:
+📚 Concepts: [concept1, concept2, ...]
+🔗 Related: [concept1 → concept2, concept3 → concept4]`
 
 const deepDiveSystem = `You are Pear, a pair programmer giving a thorough deep-dive on a specific topic.
 
@@ -68,7 +76,11 @@ Rules:
 - Build from fundamentals to advanced aspects
 - Include practical tips they can apply immediately
 - Do NOT end with a question or quiz unless the user specifically asks to be tested
-- Calibrate depth to the developer's level`
+- Calibrate depth to the developer's level
+
+At the end of your response, add concept tags on separate lines:
+📚 Concepts: [concept1, concept2, ...]
+🔗 Related: [concept1 → concept2, concept3 → concept4]`
 
 // Proactive builds system prompt and messages for a proactive code review.
 // History is capped to last 3 messages.
