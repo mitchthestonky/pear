@@ -183,6 +183,9 @@ func (m InputModel) View() string {
 
 func loadFileCache() []string {
 	cmd := exec.Command("git", "ls-files")
+	if root, err := exec.Command("git", "rev-parse", "--show-toplevel").Output(); err == nil {
+		cmd.Dir = strings.TrimSpace(string(root))
+	}
 	out, err := cmd.Output()
 	if err != nil {
 		return nil

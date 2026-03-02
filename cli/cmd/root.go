@@ -42,6 +42,8 @@ var rootCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
+		_ = config.ResolveCodebase(cfg)
+
 		logsDir := filepath.Join(config.Dir(), "logs")
 		logger, _ := logging.NewLogger(logsDir)
 		if logger != nil {

@@ -53,9 +53,6 @@ var watchCmd = &cobra.Command{
 			defer logger.Close()
 		}
 
-		// Print header
-		fmt.Printf("🍐 Pear v0 · watching · %s/%s\n", cfg.Provider.Active, provider.Model)
-
 		// Init watcher
 		w, err := watcher.New(cfg.Watch, repoRoot, logger)
 		if err != nil {

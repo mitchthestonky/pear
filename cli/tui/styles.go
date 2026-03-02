@@ -1,6 +1,10 @@
 package tui
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"strings"
+
+	"github.com/charmbracelet/lipgloss"
+)
 
 // Brand colors
 var (
@@ -93,9 +97,5 @@ func SeparatorClose(width int) string {
 }
 
 func repeat(s string, n int) string {
-	out := ""
-	for i := 0; i < n; i++ {
-		out += s
-	}
-	return out
+	return strings.Repeat(s, n)
 }
