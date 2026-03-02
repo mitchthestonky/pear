@@ -301,7 +301,7 @@ No TUI — straight stdout output.
   > 1
 
   Anthropic API key? sk-ant-...
-  ✓ Switched to anthropic (claude-sonnet-4-5-20250929)
+  ✓ Switched to anthropic (claude-haiku-4-5)
 ```
 
 Numbered quick actions — user types a number to edit that field. Changes saved immediately.

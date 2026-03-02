@@ -142,7 +142,7 @@ active = "openrouter"
 
 [provider.anthropic]
 api_key = "sk-ant-..."
-model = "anthropic/claude-haiku-4.5"
+model = "claude-haiku-4-5"
 
 [provider.openai]
 api_key = "sk-..."

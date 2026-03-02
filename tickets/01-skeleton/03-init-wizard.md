@@ -42,4 +42,4 @@ Add to root command's `PersistentPreRun`: check `config.Exists()`. If false, run
 
 ## Notes
 - Use `bufio.Scanner` for input (Bubble Tea not needed here — wizard runs before TUI)
-- Provider-specific defaults: anthropic → `claude-sonnet-4-5-20250929`, openai → `gpt-4o`, openrouter → `anthropic/claude-3.5-sonnet`
+- Provider-specific defaults: anthropic → `claude-haiku-4-5`, openai → `gpt-4o`, openrouter → `anthropic/claude-3.5-sonnet`

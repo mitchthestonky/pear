@@ -107,7 +107,7 @@ func promptSelect(scanner *bufio.Scanner, label string, options []string) string
 func providerDefaultModel(provider string) string {
 	switch provider {
 	case "anthropic":
-		return "claude-sonnet-4-5-20250929"
+		return "claude-haiku-4-5"
 	case "openai":
 		return "gpt-4o"
 	case "openrouter":
