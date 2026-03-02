@@ -3,12 +3,14 @@ package tui
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/pearcode/pear/config"
+	"github.com/pearcode/pear/learning"
 	"github.com/pearcode/pear/llm"
 	"github.com/pearcode/pear/prompt"
 	"github.com/pearcode/pear/repocontext"
@@ -56,24 +58,30 @@ type Model struct {
 	queuedTrig *ReviewTrigger
 	width      int
 	height     int
-	cancelFn   context.CancelFunc
-	chunkCh    <-chan string
-	settings   settingsState
+	cancelFn     context.CancelFunc
+	chunkCh      <-chan string
+	conceptStore *learning.ConceptStore
+	learningPath string
+	settings     settingsState
 }
 
 // NewModel creates a new TUI model.
 func NewModel(cfg *config.Config, client llm.LLMClient, mode string, triggers <-chan ReviewTrigger) Model {
+	lpath := filepath.Join(config.Dir(), "learning.json")
+	store, _ := learning.Load(lpath)
 	return Model{
-		input:     NewInputModel(),
-		output:    NewOutputModel(80, 20),
-		mode:      mode,
-		state:     "idle",
-		config:    cfg,
-		llmClient: client,
-		triggers:  triggers,
-		stats:     SessionStats{StartTime: time.Now()},
-		width:     80,
-		height:    24,
+		input:        NewInputModel(),
+		output:       NewOutputModel(80, 20),
+		mode:         mode,
+		state:        "idle",
+		config:       cfg,
+		llmClient:    client,
+		triggers:     triggers,
+		stats:        SessionStats{StartTime: time.Now()},
+		conceptStore: store,
+		learningPath: lpath,
+		width:        80,
+		height:       24,
 	}
 }
 
@@ -159,6 +167,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.state = "idle"
 		m.input.SetEnabled(true)
 		m.stats.Reviews++
+
+		if msg.Response != nil && m.conceptStore != nil {
+			concepts, relationships := learning.Extract(msg.Response.Content)
+			if len(concepts) > 0 {
+				m.conceptStore.Record(concepts, relationships)
+				m.stats.Concepts += len(concepts)
+				_ = m.conceptStore.Save(m.learningPath)
+			}
+		}
 
 		var cmds []tea.Cmd
 		if m.queuedTrig != nil {
