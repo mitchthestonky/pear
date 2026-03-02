@@ -295,20 +295,26 @@ func (m Model) renderBottom() string {
 	hints := dim.Render(" ") +
 		key.Render("Enter") + dim.Render(" to send • ") +
 		key.Render("@") + dim.Render(" mention data • ") +
-		key.Render("/") + dim.Render(" commands • ") +
-		key.Render("/copy") + dim.Render(" latest response")
+		key.Render("/copy") + dim.Render(" latest response • ") +
+		key.Render("/") + dim.Render(" commands list")
 	b.WriteString("\n")
 	b.WriteString(hints)
 
 	// Status line below input
 	var status string
 	if m.mode == "watch" && m.state == "idle" && !m.paused {
+		// Pulse between bright and dim dot
+		dot := "●"
+		if m.listenDots%2 == 1 {
+			dot = "·"
+		}
 		dots := strings.Repeat(".", m.listenDots)
 		pad := strings.Repeat(" ", 3-m.listenDots)
-		status = lipgloss.NewStyle().Foreground(colorGreen).Bold(true).Render(
+		greenDot := lipgloss.NewStyle().Foreground(colorGreen).Render(dot)
+		status = " " + greenDot + lipgloss.NewStyle().Foreground(colorGreen).Bold(true).Render(
 			fmt.Sprintf(" Pear is watching%s%s", dots, pad))
 	} else if m.state == "streaming" {
-		status = ThinkingStyle.Render(" Pear is thinking...")
+		status = ThinkingStyle.Render(" ✦ Pear is thinking...")
 	} else if m.paused {
 		status = ThinkingStyle.Render(" ⏸ Paused")
 	}
@@ -846,7 +852,7 @@ func isScrollMsg(msg tea.Msg) bool {
 }
 
 func listenTick() tea.Cmd {
-	return tea.Tick(500*time.Millisecond, func(time.Time) tea.Msg {
+	return tea.Tick(800*time.Millisecond, func(time.Time) tea.Msg {
 		return listenTickMsg{}
 	})
 }
