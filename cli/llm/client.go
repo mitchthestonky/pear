@@ -50,7 +50,7 @@ func NewClient(provider string, detail ProviderDetail) (LLMClient, error) {
 	case "anthropic":
 		return NewAnthropicClient(detail), nil
 	case "openai":
-		return nil, fmt.Errorf("openai provider not yet implemented")
+		return NewOpenAIClient(detail), nil
 	case "openrouter":
 		return nil, fmt.Errorf("openrouter provider not yet implemented")
 	default:
