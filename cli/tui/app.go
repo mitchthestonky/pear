@@ -286,13 +286,24 @@ func (m Model) renderBottom() string {
 		Render(m.input.View())
 	b.WriteString(inputBox)
 
+	// Hints bar
+	dim := lipgloss.NewStyle().Foreground(colorDim)
+	key := lipgloss.NewStyle().Foreground(colorDim).Bold(true)
+	hints := dim.Render(" ") +
+		key.Render("Enter") + dim.Render(" to send • ") +
+		key.Render("Shift+Enter") + dim.Render(" new line • ") +
+		key.Render("@") + dim.Render(" mention data • ") +
+		key.Render("Shift+Click") + dim.Render(" copy text")
+	b.WriteString("\n")
+	b.WriteString(hints)
+
 	// Status line below input
 	var status string
 	if m.mode == "watch" && m.state == "idle" && !m.paused {
 		dots := strings.Repeat(".", m.listenDots)
 		pad := strings.Repeat(" ", 3-m.listenDots)
-		status = lipgloss.NewStyle().Foreground(colorGreen).Italic(true).Render(
-			fmt.Sprintf(" 🍐 Pear is listening%s%s", dots, pad))
+		status = lipgloss.NewStyle().Foreground(colorGreen).Bold(true).Render(
+			fmt.Sprintf(" Pear is listening%s%s", dots, pad))
 	} else if m.state == "streaming" {
 		status = ThinkingStyle.Render(" Pear is thinking...")
 	} else if m.paused {
