@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/pearcode/pear/config"
 	"github.com/pearcode/pear/llm"
+	"github.com/pearcode/pear/config"
 	"github.com/spf13/cobra"
 )
 
@@ -43,7 +43,7 @@ var askCmd = &cobra.Command{
 
 		printSeparator()
 
-		_, err = client.Stream(context.Background(), messages, opts, func(chunk string) {
+		_, err = llm.StreamWithRetry(context.Background(), client, messages, opts, func(chunk string) {
 			fmt.Print(chunk)
 		})
 		if err != nil {

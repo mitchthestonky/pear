@@ -45,6 +45,37 @@ func (e *LLMError) Error() string {
 	return fmt.Sprintf("llm error (%s): %s", e.Code, e.Message)
 }
 
+// StreamWithRetry wraps a client's Stream call with up to 2 retries for
+// retryable errors (rate limits, transient network errors).
+func StreamWithRetry(ctx context.Context, client LLMClient, messages []Message, opts StreamOptions, onChunk func(string)) (*Response, error) {
+	const maxRetries = 2
+	var lastErr error
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		resp, err := client.Stream(ctx, messages, opts, onChunk)
+		if err == nil {
+			return resp, nil
+		}
+		lastErr = err
+		llmErr, ok := err.(*LLMError)
+		if !ok || !llmErr.Retry {
+			return nil, err
+		}
+		if attempt == maxRetries {
+			break
+		}
+		wait := llmErr.After
+		if wait == 0 {
+			wait = time.Duration(attempt+1) * 2 * time.Second
+		}
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(wait):
+		}
+	}
+	return nil, lastErr
+}
+
 func NewClient(provider string, detail ProviderDetail) (LLMClient, error) {
 	switch provider {
 	case "anthropic":

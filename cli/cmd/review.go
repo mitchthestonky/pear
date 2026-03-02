@@ -74,7 +74,7 @@ var reviewCmd = &cobra.Command{
 
 		printSeparator()
 
-		_, err = client.Stream(context.Background(), messages, streamOpts, func(chunk string) {
+		_, err = llm.StreamWithRetry(context.Background(), client, messages, streamOpts, func(chunk string) {
 			fmt.Print(chunk)
 		})
 		if err != nil {

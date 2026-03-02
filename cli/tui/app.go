@@ -550,7 +550,7 @@ func (m *Model) startStream(systemPrompt string, messages []llm.Message) tea.Cmd
 	m.chunkCh = ch
 
 	streamCmd := func() tea.Msg {
-		resp, err := client.Stream(ctx, messages, opts, func(chunk string) {
+		resp, err := llm.StreamWithRetry(ctx, client, messages, opts, func(chunk string) {
 			ch <- chunk
 		})
 		close(ch)
