@@ -3,7 +3,10 @@ package tui
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -291,9 +294,9 @@ func (m Model) renderBottom() string {
 	key := lipgloss.NewStyle().Foreground(colorDim).Bold(true)
 	hints := dim.Render(" ") +
 		key.Render("Enter") + dim.Render(" to send • ") +
-		key.Render("Shift+Enter") + dim.Render(" new line • ") +
 		key.Render("@") + dim.Render(" mention data • ") +
-		key.Render("Shift+Click") + dim.Render(" copy text")
+		key.Render("/") + dim.Render(" commands • ") +
+		key.Render("/copy") + dim.Render(" latest response")
 	b.WriteString("\n")
 	b.WriteString(hints)
 
@@ -303,14 +306,14 @@ func (m Model) renderBottom() string {
 		dots := strings.Repeat(".", m.listenDots)
 		pad := strings.Repeat(" ", 3-m.listenDots)
 		status = lipgloss.NewStyle().Foreground(colorGreen).Bold(true).Render(
-			fmt.Sprintf(" Pear is listening%s%s", dots, pad))
+			fmt.Sprintf(" Pear is watching%s%s", dots, pad))
 	} else if m.state == "streaming" {
 		status = ThinkingStyle.Render(" Pear is thinking...")
 	} else if m.paused {
 		status = ThinkingStyle.Render(" ⏸ Paused")
 	}
 	if status != "" {
-		b.WriteString("\n")
+		b.WriteString("\n\n")
 		b.WriteString(status)
 	}
 
@@ -419,6 +422,8 @@ func (m *Model) handleSlash(msg SlashMsg) tea.Cmd {
   /settings  — Edit configuration
   /provider  — Change LLM provider
   /model <n> — Change model
+  /copy      — Copy last response to clipboard
+  /export    — Export chat history to file
   /key       — Update API key`
 		m.output.AppendSystem(help)
 
@@ -538,10 +543,71 @@ func (m *Model) handleSlash(msg SlashMsg) tea.Cmd {
 		}
 		return m.handleTrigger(trigger)
 
+	case "copy":
+		// Find the last assistant message
+		var last string
+		for i := len(m.history) - 1; i >= 0; i-- {
+			if m.history[i].Role == "assistant" {
+				last = m.history[i].Content
+				break
+			}
+		}
+		if last == "" {
+			m.output.AppendSystem("Nothing to copy yet.")
+			return nil
+		}
+		clipCmd := clipboardCmd()
+		if clipCmd == nil {
+			m.output.AppendSystem("⚠ No clipboard tool found (need pbcopy, xclip, or wl-copy).")
+			return nil
+		}
+		clipCmd.Stdin = strings.NewReader(last)
+		if err := clipCmd.Run(); err != nil {
+			m.output.AppendSystem(fmt.Sprintf("⚠ Copy failed: %s", err))
+			return nil
+		}
+		m.output.AppendSystem("✓ Last response copied to clipboard.")
+
+	case "export":
+		filename := fmt.Sprintf("pear-session-%s.md", time.Now().Format("2006-01-02-150405"))
+		var b strings.Builder
+		b.WriteString("# Pear Session Export\n\n")
+		for _, msg := range m.history {
+			if msg.Role == "user" {
+				b.WriteString("## You\n\n")
+			} else {
+				b.WriteString("## Pear\n\n")
+			}
+			b.WriteString(msg.Content)
+			b.WriteString("\n\n---\n\n")
+		}
+		if err := os.WriteFile(filename, []byte(b.String()), 0644); err != nil {
+			m.output.AppendSystem(fmt.Sprintf("⚠ Export failed: %s", err))
+			return nil
+		}
+		m.output.AppendSystem(fmt.Sprintf("✓ Chat exported to %s", filename))
+
 	default:
 		m.output.AppendSystem("Unknown command. Type /help for available commands.")
 	}
 	return nil
+}
+
+func clipboardCmd() *exec.Cmd {
+	switch runtime.GOOS {
+	case "darwin":
+		return exec.Command("pbcopy")
+	case "linux":
+		if _, err := exec.LookPath("wl-copy"); err == nil {
+			return exec.Command("wl-copy")
+		}
+		if _, err := exec.LookPath("xclip"); err == nil {
+			return exec.Command("xclip", "-selection", "clipboard")
+		}
+		return nil
+	default:
+		return nil
+	}
 }
 
 func (m *Model) showSettingsMenu() {

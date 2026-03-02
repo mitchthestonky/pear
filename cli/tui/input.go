@@ -40,6 +40,8 @@ var slashCommands = []slashCommand{
 	{"provider", "Change LLM provider"},
 	{"model", "Change model"},
 	{"key", "Update API key"},
+	{"copy", "Copy last response"},
+	{"export", "Export chat to file"},
 }
 
 // AutocompleteItem is a single autocomplete suggestion.
