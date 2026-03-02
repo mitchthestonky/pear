@@ -254,7 +254,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// Only forward scroll-relevant messages to the viewport to prevent
 	// typing and other keys from causing viewport jumps.
-	if isScrollMsg(msg) {
+	if isScrollMsg(msg) && !m.input.AutocompleteActive() {
 		m.output, cmd = m.output.Update(msg)
 		if cmd != nil {
 			cmds = append(cmds, cmd)

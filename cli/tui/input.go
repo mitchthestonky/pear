@@ -65,6 +65,11 @@ type InputModel struct {
 	fileCache    []string
 }
 
+// AutocompleteActive reports whether the autocomplete menu is showing.
+func (m InputModel) AutocompleteActive() bool {
+	return m.autocomplete.active
+}
+
 // NewInputModel creates a new input component.
 func NewInputModel() InputModel {
 	ti := textinput.New()
