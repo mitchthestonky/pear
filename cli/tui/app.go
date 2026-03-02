@@ -118,8 +118,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		outputHeight := m.height - m.inputHeight()
-		m.output.SetSize(m.width, outputHeight)
+		m.syncViewportHeight()
 		return m, nil
 
 	case tea.KeyMsg:
@@ -242,9 +241,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// Forward to sub-models
 	var cmd tea.Cmd
+	prevAC := m.input.autocomplete.active
 	m.input, cmd = m.input.Update(msg)
 	if cmd != nil {
 		cmds = append(cmds, cmd)
+	}
+
+	// Recalculate viewport height if autocomplete toggled (changes chrome height)
+	if m.input.autocomplete.active != prevAC {
+		m.syncViewportHeight()
 	}
 
 	// Only forward scroll-relevant messages to the viewport to prevent
@@ -259,22 +264,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-// View renders the full layout.
-func (m Model) View() string {
-	var b strings.Builder
-
-	// Header
+// renderHeader returns the rendered header line.
+func (m Model) renderHeader() string {
 	provider := config.ActiveProvider(m.config)
 	header := HeaderStyle.Render(fmt.Sprintf("🍐 Pear v0 · %s · %s/%s", m.mode, m.config.Provider.Active, provider.Model))
 	if m.paused {
 		header += " · paused"
 	}
-	b.WriteString(header)
-	b.WriteString("\n")
+	return header
+}
 
-	// Output (viewport fills remaining space)
-	b.WriteString(m.output.View())
-	b.WriteString("\n")
+// renderBottom returns the rendered input box + status line below the viewport.
+func (m Model) renderBottom() string {
+	var b strings.Builder
 
 	// Bordered input box
 	inputBox := lipgloss.NewStyle().
@@ -296,9 +298,33 @@ func (m Model) View() string {
 	} else if m.paused {
 		status = ThinkingStyle.Render(" ⏸ Paused")
 	}
-	b.WriteString("\n")
-	b.WriteString(status)
+	if status != "" {
+		b.WriteString("\n")
+		b.WriteString(status)
+	}
 
+	return b.String()
+}
+
+// syncViewportHeight recalculates the viewport height from the rendered chrome.
+func (m *Model) syncViewportHeight() {
+	chrome := lipgloss.Height(m.renderHeader()) + lipgloss.Height(m.renderBottom())
+	vpHeight := m.height - chrome
+	if vpHeight < 1 {
+		vpHeight = 1
+	}
+	m.output.SetSize(m.width, vpHeight)
+}
+
+// View renders the full layout. All state mutations happen in Update;
+// this is a pure render function.
+func (m Model) View() string {
+	var b strings.Builder
+	b.WriteString(m.renderHeader())
+	b.WriteString("\n")
+	b.WriteString(m.output.View())
+	b.WriteString("\n")
+	b.WriteString(m.renderBottom())
 	return b.String()
 }
 
@@ -738,20 +764,6 @@ func isScrollMsg(msg tea.Msg) bool {
 		return true
 	}
 	return false
-}
-
-// inputHeight returns the number of terminal lines the input area occupies.
-// 1 header + 1 border-top + 1 input + 1 border-bottom + 1 status = 5
-func (m Model) inputHeight() int {
-	h := 5 // header + bordered input (3 lines) + status line
-	if m.input.autocomplete.active && len(m.input.autocomplete.matches) > 0 {
-		n := len(m.input.autocomplete.matches)
-		if n > 5 {
-			n = 5
-		}
-		h += n + 2 // matches + border
-	}
-	return h
 }
 
 func listenTick() tea.Cmd {

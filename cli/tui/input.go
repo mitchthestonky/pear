@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 // SubmitMsg is sent when the user submits input.
@@ -20,12 +21,40 @@ type SlashMsg struct {
 	Args    string
 }
 
-// AutocompleteModel tracks @file autocomplete state.
+// slashCommand defines a slash command with its description.
+type slashCommand struct {
+	Name string
+	Desc string
+}
+
+var slashCommands = []slashCommand{
+	{"help", "Show all commands"},
+	{"clear", "Clear chat history"},
+	{"exit", "End session"},
+	{"watch", "Start file watcher"},
+	{"review", "Review current changes"},
+	{"pause", "Pause proactive reviews"},
+	{"resume", "Resume proactive reviews"},
+	{"status", "Session info"},
+	{"settings", "Configure provider & model"},
+	{"provider", "Change LLM provider"},
+	{"model", "Change model"},
+	{"key", "Update API key"},
+}
+
+// AutocompleteItem is a single autocomplete suggestion.
+type AutocompleteItem struct {
+	Name string
+	Desc string // optional description (slash commands)
+}
+
+// AutocompleteModel tracks @file and /command autocomplete state.
 type AutocompleteModel struct {
 	active   bool
 	prefix   string
-	matches  []string
+	items    []AutocompleteItem
 	selected int
+	isSlash  bool
 }
 
 // InputModel wraps a text input with @file autocomplete and slash detection.
@@ -75,22 +104,36 @@ func (m InputModel) Update(msg tea.Msg) (InputModel, tea.Cmd) {
 				}
 				return m, nil
 			case "down":
-				if m.autocomplete.selected < len(m.autocomplete.matches)-1 {
+				if m.autocomplete.selected < len(m.autocomplete.items)-1 {
 					m.autocomplete.selected++
 				}
 				return m, nil
-			case "enter":
-				if len(m.autocomplete.matches) > 0 {
-					selected := m.autocomplete.matches[m.autocomplete.selected]
-					// Replace @prefix with @selected
-					val := m.textinput.Value()
-					atIdx := strings.LastIndex(val, "@")
-					if atIdx >= 0 {
-						m.textinput.SetValue(val[:atIdx] + "@" + selected + " ")
-						m.textinput.SetCursor(len(m.textinput.Value()))
+			case "tab", "enter":
+				if len(m.autocomplete.items) == 0 {
+					m.autocomplete = AutocompleteModel{}
+					return m, nil
+				}
+				item := m.autocomplete.items[m.autocomplete.selected]
+				isSlash := m.autocomplete.isSlash
+				m.autocomplete = AutocompleteModel{}
+
+				if isSlash && msg.String() == "enter" {
+					m.textinput.SetValue("")
+					cmd := item.Name
+					return m, func() tea.Msg {
+						return SlashMsg{Command: cmd, Args: ""}
 					}
 				}
-				m.autocomplete = AutocompleteModel{}
+				if isSlash {
+					m.textinput.SetValue("/" + item.Name + " ")
+				} else {
+					v := m.textinput.Value()
+					atIdx := strings.LastIndex(v, "@")
+					if atIdx >= 0 {
+						m.textinput.SetValue(v[:atIdx] + "@" + item.Name + " ")
+					}
+				}
+				m.textinput.SetCursor(len(m.textinput.Value()))
 				return m, nil
 			case "esc":
 				m.autocomplete = AutocompleteModel{}
@@ -134,20 +177,50 @@ func (m InputModel) Update(msg tea.Msg) (InputModel, tea.Cmd) {
 	var cmd tea.Cmd
 	m.textinput, cmd = m.textinput.Update(msg)
 
-	// Check for @ autocomplete trigger
+	// Check for autocomplete triggers (/ commands and @files).
+	// Preserve selected index when the prefix hasn't changed (e.g. on cursor blink).
 	val := m.textinput.Value()
-	atIdx := strings.LastIndex(val, "@")
-	if atIdx >= 0 {
+	prevPrefix := m.autocomplete.prefix
+	prevSelected := m.autocomplete.selected
+
+	if strings.HasPrefix(val, "/") && !strings.Contains(val, " ") {
+		prefix := strings.TrimPrefix(val, "/")
+		items := filterSlashCommands(prefix)
+		if len(items) > 0 {
+			sel := 0
+			if prefix == prevPrefix && prevSelected < len(items) {
+				sel = prevSelected
+			}
+			m.autocomplete = AutocompleteModel{
+				active:   true,
+				prefix:   prefix,
+				items:    items,
+				isSlash:  true,
+				selected: sel,
+			}
+		} else {
+			m.autocomplete = AutocompleteModel{}
+		}
+	} else if atIdx := strings.LastIndex(val, "@"); atIdx >= 0 {
 		prefix := val[atIdx+1:]
 		if !strings.Contains(prefix, " ") {
 			if m.fileCache == nil {
 				m.fileCache = loadFileCache()
 			}
-			m.autocomplete.active = true
-			m.autocomplete.prefix = prefix
-			m.autocomplete.matches = filterFiles(m.fileCache, prefix)
-			if m.autocomplete.selected >= len(m.autocomplete.matches) {
-				m.autocomplete.selected = 0
+			files := filterFiles(m.fileCache, prefix)
+			items := make([]AutocompleteItem, len(files))
+			for i, f := range files {
+				items[i] = AutocompleteItem{Name: f}
+			}
+			sel := 0
+			if prefix == prevPrefix && prevSelected < len(items) {
+				sel = prevSelected
+			}
+			m.autocomplete = AutocompleteModel{
+				active:   true,
+				prefix:   prefix,
+				items:    items,
+				selected: sel,
 			}
 		} else {
 			m.autocomplete = AutocompleteModel{}
@@ -163,20 +236,30 @@ func (m InputModel) Update(msg tea.Msg) (InputModel, tea.Cmd) {
 func (m InputModel) View() string {
 	var b strings.Builder
 
-	if m.autocomplete.active && len(m.autocomplete.matches) > 0 {
-		var items []string
-		max := 5
-		if len(m.autocomplete.matches) < max {
-			max = len(m.autocomplete.matches)
+	if m.autocomplete.active && len(m.autocomplete.items) > 0 {
+		var lines []string
+		max := 6
+		if len(m.autocomplete.items) < max {
+			max = len(m.autocomplete.items)
 		}
+		dim := lipgloss.NewStyle().Foreground(colorDim)
 		for i := 0; i < max; i++ {
+			item := m.autocomplete.items[i]
+			name := item.Name
+			if m.autocomplete.isSlash {
+				name = "/" + name
+			}
+			desc := ""
+			if item.Desc != "" {
+				desc = "  " + dim.Render(item.Desc)
+			}
 			if i == m.autocomplete.selected {
-				items = append(items, AutocompleteSelectedStyle.Render(m.autocomplete.matches[i]))
+				lines = append(lines, AutocompleteSelectedStyle.Render(name)+desc)
 			} else {
-				items = append(items, m.autocomplete.matches[i])
+				lines = append(lines, dim.Render(name)+desc)
 			}
 		}
-		b.WriteString(AutocompleteStyle.Render(strings.Join(items, "\n")))
+		b.WriteString(AutocompleteStyle.Render(strings.Join(lines, "\n")))
 		b.WriteString("\n")
 	}
 
@@ -221,6 +304,17 @@ func filterFiles(files []string, prefix string) []string {
 		}
 	}
 	return matches
+}
+
+func filterSlashCommands(prefix string) []AutocompleteItem {
+	prefix = strings.ToLower(prefix)
+	var items []AutocompleteItem
+	for _, sc := range slashCommands {
+		if strings.HasPrefix(sc.Name, prefix) {
+			items = append(items, AutocompleteItem{Name: sc.Name, Desc: sc.Desc})
+		}
+	}
+	return items
 }
 
 func resolveAtFiles(text string) map[string]string {

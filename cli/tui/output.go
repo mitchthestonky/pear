@@ -207,7 +207,11 @@ func (m *OutputModel) refreshViewport() {
 		m.viewport.SetContent(m.content.String())
 	}
 	if m.autoScroll {
-		m.viewport.GotoBottom()
+		if m.viewport.TotalLineCount() > m.viewport.Height {
+			m.viewport.GotoBottom()
+		} else {
+			m.viewport.SetYOffset(0)
+		}
 	}
 }
 
