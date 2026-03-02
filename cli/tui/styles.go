@@ -76,6 +76,16 @@ var ProgressBarFull = lipgloss.NewStyle().
 var ProgressBarEmpty = lipgloss.NewStyle().
 	Foreground(colorDim)
 
+// UserMessageStyle for displaying the user's input in the log
+var UserMessageStyle = lipgloss.NewStyle().
+	Foreground(colorDim).
+	Bold(true)
+
+// ThinkingStyle for the "Thinking..." indicator
+var ThinkingStyle = lipgloss.NewStyle().
+	Foreground(colorDim).
+	Italic(true)
+
 // SeparatorOpen renders ━━━ Pear ━━━
 func SeparatorOpen(width int) string {
 	label := " Pear "

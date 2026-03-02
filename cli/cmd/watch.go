@@ -103,7 +103,7 @@ var watchCmd = &cobra.Command{
 
 		// Launch TUI
 		m := tui.NewModel(cfg, client, "watch", tuiTriggers)
-		p := tea.NewProgram(m, tea.WithAltScreen())
+		p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion(), tea.WithFilter(tui.FilterUnknown))
 		if _, err := p.Run(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)

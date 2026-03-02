@@ -10,13 +10,14 @@ import (
 
 // OutputModel is a scrollable viewport that renders streaming markdown.
 type OutputModel struct {
-	viewport   viewport.Model
-	content    *strings.Builder // pre-styled UI content (banner, headers, separators)
-	stream     *strings.Builder // raw LLM markdown accumulated during streaming
-	streaming  bool             // whether we're currently in a stream block
-	renderer   *glamour.TermRenderer
-	autoScroll bool
-	width      int
+	viewport      viewport.Model
+	content       *strings.Builder // pre-styled UI content (banner, headers, separators)
+	stream        *strings.Builder // raw LLM markdown accumulated during streaming
+	streaming     bool             // whether we're currently in a stream block
+	renderer      *glamour.TermRenderer
+	autoScroll    bool
+	width         int
+	thinkingShown bool // whether "Thinking..." is currently displayed
 }
 
 // NewOutputModel creates a new output component.
@@ -59,10 +60,20 @@ func (m *OutputModel) AppendHeader(text string) {
 	m.refreshViewport()
 }
 
+// AppendUserMessage displays the user's input in the log.
+func (m *OutputModel) AppendUserMessage(text string) {
+	m.content.WriteString(UserMessageStyle.Render("❯ " + text))
+	m.content.WriteString("\n")
+	m.refreshViewport()
+}
+
 // StartStream begins a new response block with an opening separator.
 func (m *OutputModel) StartStream(width int) {
 	m.content.WriteString(SeparatorOpen(width))
 	m.content.WriteString("\n")
+	m.content.WriteString(ThinkingStyle.Render("Thinking..."))
+	m.content.WriteString("\n")
+	m.thinkingShown = true
 	m.stream.Reset()
 	m.streaming = true
 	m.refreshViewport()
@@ -70,6 +81,16 @@ func (m *OutputModel) StartStream(width int) {
 
 // AppendChunk adds a streaming chunk and re-renders.
 func (m *OutputModel) AppendChunk(text string) {
+	if m.thinkingShown {
+		// Remove the "Thinking..." line from content
+		s := m.content.String()
+		thinkingLine := ThinkingStyle.Render("Thinking...") + "\n"
+		if idx := strings.LastIndex(s, thinkingLine); idx >= 0 {
+			m.content.Reset()
+			m.content.WriteString(s[:idx] + s[idx+len(thinkingLine):])
+		}
+		m.thinkingShown = false
+	}
 	m.stream.WriteString(text)
 	m.refreshViewport()
 }

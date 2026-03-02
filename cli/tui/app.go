@@ -14,6 +14,7 @@ import (
 	"github.com/pearcode/pear/llm"
 	"github.com/pearcode/pear/prompt"
 	"github.com/pearcode/pear/repocontext"
+	"github.com/pearcode/pear/watcher"
 )
 
 // ReviewTrigger represents a watcher-generated review trigger.
@@ -28,7 +29,6 @@ type ChunkMsg struct{ Text string }
 type StreamDoneMsg struct{ Response *llm.Response }
 type StreamErrorMsg struct{ Err error }
 type ReviewTriggerMsg struct{ Trigger ReviewTrigger }
-type initMsg struct{}
 
 // SessionStats tracks session metrics.
 type SessionStats struct {
@@ -64,15 +64,21 @@ type Model struct {
 	conceptStore *learning.ConceptStore
 	learningPath string
 	settings     settingsState
+	watcher      *watcher.Watcher
+	watchCancel  context.CancelFunc
 }
 
 // NewModel creates a new TUI model.
 func NewModel(cfg *config.Config, client llm.LLMClient, mode string, triggers <-chan ReviewTrigger) Model {
 	lpath := filepath.Join(config.Dir(), "learning.json")
 	store, _ := learning.Load(lpath)
+	output := NewOutputModel(80, 20)
+	banner := WelcomeBanner(cfg, 80)
+	output.content.WriteString(banner)
+	output.refreshViewport()
 	return Model{
 		input:        NewInputModel(),
-		output:       NewOutputModel(80, 20),
+		output:       output,
 		mode:         mode,
 		state:        "idle",
 		config:       cfg,
@@ -89,7 +95,6 @@ func NewModel(cfg *config.Config, client llm.LLMClient, mode string, triggers <-
 // Init initializes the model.
 func (m Model) Init() tea.Cmd {
 	var cmds []tea.Cmd
-	cmds = append(cmds, func() tea.Msg { return initMsg{} })
 	cmds = append(cmds, m.input.textinput.Focus())
 	if m.triggers != nil {
 		cmds = append(cmds, waitForTrigger(m.triggers))
@@ -102,12 +107,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
-	case initMsg:
-		banner := WelcomeBanner(m.config, m.width)
-		m.output.content.WriteString(banner)
-		m.output.refreshViewport()
-		return m, nil
-
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
@@ -118,6 +117,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c":
+			if m.watchCancel != nil {
+				m.watchCancel()
+			}
 			return m, tea.Quit
 		case "esc":
 			if m.settings.active {
@@ -277,6 +279,7 @@ func (m *Model) handleUserInput(msg SubmitMsg) tea.Cmd {
 	m.state = "streaming"
 	m.input.SetEnabled(false)
 
+	m.output.AppendUserMessage(msg.Text)
 	m.history = append(m.history, llm.Message{Role: "user", Content: msg.Text})
 
 	// Resolve @files
@@ -316,6 +319,8 @@ func (m *Model) handleSlash(msg SlashMsg) tea.Cmd {
   /help      — Show this help
   /clear     — Clear chat history
   /exit      — End session
+  /watch     — Start file watcher from interactive mode
+  /review    — One-shot review of current git diff
   /pause     — Pause proactive reviews (watch mode)
   /resume    — Resume proactive reviews (watch mode)
   /status    — Show session status
@@ -384,6 +389,61 @@ func (m *Model) handleSlash(msg SlashMsg) tea.Cmd {
 	case "key":
 		m.output.AppendSystem(fmt.Sprintf("New API key for %s?", m.config.Provider.Active))
 		m.settings = settingsState{active: true, awaitingEdit: 6}
+
+	case "watch":
+		// Clean up existing watcher if it exists
+		if m.watchCancel != nil {
+			m.watchCancel()
+			m.watchCancel = nil
+			m.watcher = nil
+		}
+		repoRoot, err := repocontext.RepoRoot()
+		if err != nil {
+			m.output.AppendSystem("⚠ Not a git repository. Cannot start watcher.")
+			return nil
+		}
+		w, err := watcher.New(m.config.Watch, repoRoot, nil)
+		if err != nil {
+			m.output.AppendSystem(fmt.Sprintf("⚠ Error starting watcher: %s", err))
+			return nil
+		}
+		ctx, cancel := context.WithCancel(context.Background())
+		m.watcher = w
+		m.watchCancel = cancel
+		watcherTriggers := w.Start(ctx)
+		tuiTriggers := make(chan ReviewTrigger, 1)
+		go func() {
+			for wt := range watcherTriggers {
+				tuiTriggers <- ReviewTrigger{
+					Diff:        wt.Diff,
+					TriggerType: wt.Type,
+					Info:        formatWatchTriggerInfo(wt),
+				}
+			}
+			close(tuiTriggers)
+		}()
+		m.triggers = tuiTriggers
+		m.mode = "watch"
+		m.output.AppendSystem("🍐 File watcher started. Pear will review your changes automatically.")
+		return waitForTrigger(m.triggers)
+
+	case "review":
+		if m.state == "streaming" {
+			return nil
+		}
+		repoRoot, _ := repocontext.RepoRoot()
+		diff, err := repocontext.GitDiff(repoRoot)
+		if err != nil || strings.TrimSpace(diff) == "" {
+			m.output.AppendSystem("No changes to review.")
+			return nil
+		}
+		lines := strings.Count(diff, "\n")
+		trigger := ReviewTrigger{
+			Diff:        diff,
+			TriggerType: "settle",
+			Info:        fmt.Sprintf("made changes (%d lines)", lines),
+		}
+		return m.handleTrigger(trigger)
 
 	default:
 		m.output.AppendSystem("Unknown command. Type /help for available commands.")
@@ -599,6 +659,17 @@ func waitForChunk(ch <-chan string) tea.Cmd {
 			return nil
 		}
 		return ChunkMsg{Text: chunk}
+	}
+}
+
+func formatWatchTriggerInfo(wt watcher.ReviewTrigger) string {
+	switch wt.Type {
+	case "commit":
+		return fmt.Sprintf("committed: %s", wt.Summary)
+	case "settle":
+		return fmt.Sprintf("made changes (%s)", wt.Summary)
+	default:
+		return wt.Summary
 	}
 }
 
