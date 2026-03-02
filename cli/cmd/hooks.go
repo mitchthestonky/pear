@@ -2,7 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
+	"github.com/pearcode/pear/hooks"
+	"github.com/pearcode/pear/repocontext"
 	"github.com/spf13/cobra"
 )
 
@@ -13,17 +16,33 @@ var hooksCmd = &cobra.Command{
 
 var hooksInstallCmd = &cobra.Command{
 	Use:   "install",
-	Short: "Install git hooks",
+	Short: "Install post-commit git hook",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("not implemented yet")
+		root, err := repocontext.RepoRoot()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: not a git repository\n")
+			os.Exit(1)
+		}
+		if err := hooks.Install(root); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
 	},
 }
 
 var hooksUninstallCmd = &cobra.Command{
 	Use:   "uninstall",
-	Short: "Uninstall git hooks",
+	Short: "Uninstall post-commit git hook",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("not implemented yet")
+		root, err := repocontext.RepoRoot()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: not a git repository\n")
+			os.Exit(1)
+		}
+		if err := hooks.Uninstall(root); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
 	},
 }
 
