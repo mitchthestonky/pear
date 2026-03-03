@@ -1,145 +1,151 @@
+```
+        ██
+       ████
+      ██████
+     ████████
+    ██████████
+    ██████████
+     ████████
+      ██████
+```
+
 # pear
 
-**A pair programmer that watches your code and tells you what matters.**
+**AI makes you fast. Pear makes you sharp.**
 
-pear runs in your terminal alongside your AI coding tools. It watches your diffs, detects what you don't understand, and teaches you at the right moment — without breaking your flow.
+A CLI teaching tool that watches you code and proactively teaches during natural pauses. Pear doesn't write code for you — it helps you understand what you're writing and why.
 
-AI makes you faster. pear makes you smarter.
+## Install
 
-## Features
+**Go:**
 
-- **Watch mode** — Monitors file changes and git diffs, surfaces insights during natural pauses
-- **Interactive Q&A** — Ask questions with full codebase context (`pear ask`)
-- **Code review** — On-demand review of your recent changes (`pear review`)
-- **Guided teaching** — Deep-dive explanations adapted to your level (`pear teach`)
-- **Concept tracking** — Tags and tracks engineering concepts as you encounter them
-- **Learning state memory** *(Pro)* — Remembers what you understand across sessions
-- **Adaptive pedagogy** *(Pro)* — Changes how it teaches based on your behavior
-- **Skill progression** *(Pro)* — Shows growth over time across languages and frameworks
-- **BYO any LLM** — Bring your own API key for Anthropic, OpenAI, or OpenRouter
+```sh
+go install github.com/MitchTheStonky/pear/cli@latest
+```
+
+**Homebrew:**
+
+```sh
+brew install MitchTheStonky/pear/pear
+```
+
+**curl:**
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/MitchTheStonky/pear/main/install.sh | sh
+```
 
 ## Quick Start
 
-### Prerequisites
+```sh
+# Set up your config and API key
+pear init
 
-- Go 1.24+
-- macOS (Linux planned)
-- An API key from Anthropic, OpenAI, or OpenRouter
-
-### Install from source
-
-```bash
-git clone https://github.com/pearcode/pear.git
-cd pear/cli
-go build -o pear .
-```
-
-### Set up
-
-```bash
-# Initialize config and add your API key
-./pear init
-
-# Start watching your project
-cd /path/to/your/project
+# Start watching — Pear teaches as you code
 pear watch
-```
-
-## Usage
-
-```bash
-# Watch mode — monitors changes, teaches during pauses
-pear watch
-
-# Ask a question with codebase context
-pear ask "what does this middleware do?"
-
-# Review recent changes
-pear review
-
-# Deep-dive teaching on a topic
-pear teach
-
-# See your learning progress
-pear progress
-
-# Check your setup
-pear doctor
-
-# Install git hooks for post-commit reviews
-pear hooks install
 ```
 
 ## How It Works
 
-1. **You code.** Use whatever editor and AI tools you want — Cursor, Claude Code, OpenCode, Copilot.
+1. **You code.** Use whatever editor and AI tools you want — Cursor, Claude Code, Copilot.
 2. **Pear watches.** It reads your diffs, file tree, and recent changes in the background.
-3. **You understand.** During natural pauses — while your agent thinks, after a diff lands — pear surfaces what matters.
+3. **You understand.** During natural pauses, Pear surfaces what matters.
 
 Pear doesn't write code. It makes sure you understand the code being written.
 
+## Usage
+
+### `pear watch`
+
+Interactive TUI that watches your files. When you pause, Pear reviews your recent changes and teaches you something relevant — patterns, gotchas, better approaches.
+
+### `pear ask "question"`
+
+Ask a question about your codebase. Pear reads your current context (git diff, file tree) and answers with teaching intent.
+
+### `pear review`
+
+Review your recent code changes. Pear analyzes your uncommitted diff and gives feedback focused on learning, not just linting.
+
+### `pear teach [topic]`
+
+Deep-dive teaching on a topic, grounded in your actual code. Optionally specify a topic or let Pear pick based on what you've been working on.
+
+### `pear doctor`
+
+Check system health — verifies your config, API keys, and provider connectivity.
+
+### `pear hooks install|uninstall`
+
+Install a post-commit git hook that triggers Pear to review each commit.
+
+### `pear progress`
+
+Show your learning progress across sessions.
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `pear init` | Initialize configuration |
+| `pear watch` | Watch files and teach proactively |
+| `pear ask "q"` | Ask a question |
+| `pear review` | Review recent changes |
+| `pear teach` | Deep-dive on a topic |
+| `pear doctor` | Check system health |
+| `pear hooks install` | Install git hook |
+| `pear hooks uninstall` | Remove git hook |
+| `pear progress` | Show learning progress |
+
+### TUI Slash Commands
+
+| Command | Description |
+|---------|-------------|
+| `/help` | Show all commands |
+| `/watch` | Start file watcher |
+| `/review` | Review current changes |
+| `/settings` | Configure provider & model |
+| `/status` | Session info |
+| `/copy` | Copy last response |
+| `/export` | Export conversation |
+| `/clear` | Reset conversation |
+| `/quit` | Exit |
+
 ## Configuration
 
-Config lives in `~/.pear/`:
+All config lives in `~/.pear/`:
 
 ```
 ~/.pear/
-├── config.toml          # API keys, provider, preferences
-├── learning.json        # Your learning state (Pro)
-├── codebases/<slug>.toml  # Per-project context
-└── logs/                # Session logs
+├── config.toml          # Provider, model, preferences
+├── learning.json         # Learning progress
+├── codebases/<slug>.toml # Per-repo overrides
+└── logs/<timestamp>.log  # Session logs
 ```
 
-### Supported providers
+## Providers
 
-| Provider | Models | Config key |
-|----------|--------|------------|
-| Anthropic | Claude 4.5 Sonnet, Claude 4 Opus | `anthropic` |
-| OpenAI | GPT-4o, o3 | `openai` |
-| OpenRouter | Any supported model | `openrouter` |
+| Provider | Default Model | API Key Env |
+|----------|--------------|-------------|
+| Anthropic | `claude-sonnet-4-20250514` | `ANTHROPIC_API_KEY` |
+| OpenAI | `gpt-4o` | `OPENAI_API_KEY` |
+| OpenRouter | `anthropic/claude-sonnet-4-20250514` | `OPENROUTER_API_KEY` |
 
-## Architecture
+Set your provider during `pear init` or edit `~/.pear/config.toml` directly.
 
-Written in Go. Built with:
+## Built With
 
 - [Cobra](https://github.com/spf13/cobra) — CLI framework
-- [Bubble Tea](https://github.com/charmbracelet/bubbletea) — Terminal UI
+- [Bubble Tea](https://github.com/charmbracelet/bubbletea) — TUI framework
 - [Glamour](https://github.com/charmbracelet/glamour) — Markdown rendering
 - [Lipgloss](https://github.com/charmbracelet/lipgloss) — TUI styling
-- [fsnotify](https://github.com/fsnotify/fsnotify) — File system watching
+- [fsnotify](https://github.com/fsnotify/fsnotify) — File watching
 
 All LLM clients are hand-rolled with `net/http` for streaming control. No external SDKs.
 
-```
-cli/
-├── cmd/           # Cobra commands
-├── watcher/       # fsnotify + git polling with pause detection
-├── repocontext/   # Git diff, file tree, @file reading
-├── prompt/        # System prompt assembly
-├── llm/           # LLMClient interface + provider implementations
-├── config/        # ~/.pear/ config management
-├── learning/      # Concept extraction & learning state
-├── hooks/         # Git hook install/uninstall
-├── tui/           # Bubble Tea app
-└── logging/       # Structured JSON logging
-```
-
 ## Contributing
 
-pear is open source. Contributions welcome.
-
-```bash
-# Clone and build
-git clone https://github.com/pearcode/pear.git
-cd pear/cli
-go build -o pear .
-
-# Run
-./pear doctor  # Verify setup
-./pear watch   # Start watching
-```
-
-Please open an issue before submitting large PRs.
+Contributions welcome. Please open an issue first to discuss what you'd like to change.
 
 ## License
 
@@ -148,4 +154,5 @@ MIT
 ## Links
 
 - **Website:** [pearcode.dev](https://pearcode.dev)
-- **Email:** mitch@pearcode.dev
+- **Docs:** [pearcode.dev/docs](https://pearcode.dev/docs)
+- **GitHub:** [github.com/MitchTheStonky/pear](https://github.com/MitchTheStonky/pear)
