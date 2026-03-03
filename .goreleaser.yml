@@ -1,0 +1,41 @@
+version: 2
+
+project_name: pear
+
+builds:
+  - dir: ./cli
+    binary: pear
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+
+archives:
+  - format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+
+brews:
+  - repository:
+      owner: MitchTheStonky
+      name: homebrew-pear
+    homepage: https://pearcode.dev
+    description: AI pair programmer that teaches while you code
+    license: MIT
+    install: |
+      bin.install "pear"
