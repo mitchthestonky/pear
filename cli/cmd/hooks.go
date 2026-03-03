@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/pearcode/pear/hooks"
-	"github.com/pearcode/pear/repocontext"
+	"github.com/MitchTheStonky/pear/cli/hooks"
+	"github.com/MitchTheStonky/pear/cli/repocontext"
 	"github.com/spf13/cobra"
 )
 

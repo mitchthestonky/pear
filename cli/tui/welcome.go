@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/pearcode/pear/config"
+	"github.com/MitchTheStonky/pear/cli/config"
 )
 
 // WelcomeBanner renders the startup welcome screen.

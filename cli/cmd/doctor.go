@@ -8,8 +8,8 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/pearcode/pear/config"
-	"github.com/pearcode/pear/llm"
+	"github.com/MitchTheStonky/pear/cli/config"
+	"github.com/MitchTheStonky/pear/cli/llm"
 	"github.com/spf13/cobra"
 )
 

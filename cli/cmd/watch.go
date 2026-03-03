@@ -9,12 +9,12 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/pearcode/pear/config"
-	"github.com/pearcode/pear/llm"
-	"github.com/pearcode/pear/logging"
-	"github.com/pearcode/pear/repocontext"
-	"github.com/pearcode/pear/tui"
-	"github.com/pearcode/pear/watcher"
+	"github.com/MitchTheStonky/pear/cli/config"
+	"github.com/MitchTheStonky/pear/cli/llm"
+	"github.com/MitchTheStonky/pear/cli/logging"
+	"github.com/MitchTheStonky/pear/cli/repocontext"
+	"github.com/MitchTheStonky/pear/cli/tui"
+	"github.com/MitchTheStonky/pear/cli/watcher"
 	"github.com/spf13/cobra"
 )
 

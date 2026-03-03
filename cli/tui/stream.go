@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/pearcode/pear/llm"
-	"github.com/pearcode/pear/prompt"
-	"github.com/pearcode/pear/repocontext"
+	"github.com/MitchTheStonky/pear/cli/llm"
+	"github.com/MitchTheStonky/pear/cli/prompt"
+	"github.com/MitchTheStonky/pear/cli/repocontext"
 )
 
 func (m *Model) handleTrigger(trigger ReviewTrigger) tea.Cmd {

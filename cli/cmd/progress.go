@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pearcode/pear/config"
-	"github.com/pearcode/pear/learning"
+	"github.com/MitchTheStonky/pear/cli/config"
+	"github.com/MitchTheStonky/pear/cli/learning"
 	"github.com/spf13/cobra"
 )
 

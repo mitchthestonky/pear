@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/pearcode/pear/config"
-	"github.com/pearcode/pear/llm"
+	"github.com/MitchTheStonky/pear/cli/config"
+	"github.com/MitchTheStonky/pear/cli/llm"
 )
 
 // settingsState tracks the /settings numbered editor flow.

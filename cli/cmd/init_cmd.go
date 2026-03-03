@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/pearcode/pear/config"
+	"github.com/MitchTheStonky/pear/cli/config"
 	"github.com/spf13/cobra"
 )
 

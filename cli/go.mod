@@ -1,4 +1,4 @@
-module github.com/pearcode/pear
+module github.com/MitchTheStonky/pear/cli
 
 go 1.24.2
 

@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/pearcode/pear/config"
-	"github.com/pearcode/pear/logging"
+	"github.com/MitchTheStonky/pear/cli/config"
+	"github.com/MitchTheStonky/pear/cli/logging"
 )
 
 // ReviewTrigger represents a watcher-generated review trigger.

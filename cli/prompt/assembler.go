@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pearcode/pear/llm"
-	"github.com/pearcode/pear/repocontext"
+	"github.com/MitchTheStonky/pear/cli/llm"
+	"github.com/MitchTheStonky/pear/cli/repocontext"
 )
 
 // UserProfile holds developer profile info for prompt calibration.

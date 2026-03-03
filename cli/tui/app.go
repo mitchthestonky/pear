@@ -9,10 +9,10 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/pearcode/pear/config"
-	"github.com/pearcode/pear/learning"
-	"github.com/pearcode/pear/llm"
-	"github.com/pearcode/pear/watcher"
+	"github.com/MitchTheStonky/pear/cli/config"
+	"github.com/MitchTheStonky/pear/cli/learning"
+	"github.com/MitchTheStonky/pear/cli/llm"
+	"github.com/MitchTheStonky/pear/cli/watcher"
 )
 
 // ReviewTrigger represents a watcher-generated review trigger.
