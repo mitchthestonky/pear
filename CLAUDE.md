@@ -1,18 +1,13 @@
 # Pear — Claude Code Instructions
 
 ## What This Is
-A pair programmer CLI that watches you code and teaches during natural pauses. Monorepo containing the Go CLI and Next.js marketing website.
+A pair programmer CLI that watches you code and teaches during natural pauses.
 
-## Monorepo Layout
+## Repo Layout
 ```
 cli/                     # Go CLI (the product)
-website/                 # Next.js 15 marketing site (Vercel)
-docs/cli/                # CLI-specific architecture, events, user journeys
-docs/archive/            # Historical strategy/analysis docs
-docs/v0-tickets/         # Completed v0 implementation tickets
-Vision.md                # Product vision and positioning
-PRD.md                   # Product requirements
-Architecture.md          # Architecture overview
+docs/                    # CLI architecture, events, user journeys
+CLAUDE.md, README.md, install.sh, .gitignore, .goreleaser.yml
 ```
 
 ## CLI (`cli/`)
@@ -103,18 +98,11 @@ All config under `~/.pear/`. Nothing in the user's repo except optional git hook
 └── logs/<session-timestamp>.log
 ```
 
-## Website (`website/`)
-Next.js 15, React 19, Tailwind CSS 4, shadcn/ui, Framer Motion. Deployed on Vercel.
-See `website/CLAUDE.md` for website-specific instructions.
-
 ## Reference Docs
-- `Vision.md` — product vision and positioning (root)
-- `PRD.md` — product requirements (root)
-- `Architecture.md` — architecture overview (root)
-- `docs/cli/PRD.md` — v0 CLI-specific requirements
-- `docs/cli/ARCHITECTURE.md` — CLI packages, interfaces, data flows
-- `docs/cli/USER_JOURNEYS.md` — exact UX flows and display rules
-- `docs/cli/EVENT_MODEL.md` — every event flow with pseudocode
+- `docs/PRD.md` — v0 CLI-specific requirements
+- `docs/ARCHITECTURE.md` — CLI packages, interfaces, data flows
+- `docs/USER_JOURNEYS.md` — exact UX flows and display rules
+- `docs/EVENT_MODEL.md` — every event flow with pseudocode
 
 ## Commit Style
 - Conventional commits: `feat:`, `fix:`, `refactor:`, `docs:`
