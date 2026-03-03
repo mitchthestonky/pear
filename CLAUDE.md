@@ -1,10 +1,22 @@
-# Pear v0 — Claude Code Instructions
+# Pear — Claude Code Instructions
 
 ## What This Is
-A Go CLI teaching tool that watches you code and proactively teaches during natural pauses. Built with Cobra, Bubble Tea, fsnotify. Multi-provider LLM support (Anthropic, OpenAI, OpenRouter).
+A pair programmer CLI that watches you code and teaches during natural pauses. Monorepo containing the Go CLI and Next.js marketing website.
 
-## Project Structure
-All code lives under `cli/`. Module: `github.com/pearcode/pear`
+## Monorepo Layout
+```
+cli/                     # Go CLI (the product)
+website/                 # Next.js 15 marketing site (Vercel)
+docs/cli/                # CLI-specific architecture, events, user journeys
+docs/archive/            # Historical strategy/analysis docs
+docs/v0-tickets/         # Completed v0 implementation tickets
+Vision.md                # Product vision and positioning
+PRD.md                   # Product requirements
+Architecture.md          # Architecture overview
+```
+
+## CLI (`cli/`)
+Go CLI. Module: `github.com/MitchTheStonky/pear/cli`
 
 ```
 cli/
@@ -91,12 +103,18 @@ All config under `~/.pear/`. Nothing in the user's repo except optional git hook
 └── logs/<session-timestamp>.log
 ```
 
-## Reference Docs (read before implementing)
-- `PRD.md` — product requirements, phased build order, risk flags
-- `ARCHITECTURE.md` — packages, interfaces, data flows, concurrency model
-- `USER_JOURNEYS.md` — exact UX flows and display rules
-- `EVENT_MODEL.md` — every event flow with pseudocode
-- `tickets/` — individual implementation tickets with deps and acceptance criteria
+## Website (`website/`)
+Next.js 15, React 19, Tailwind CSS 4, shadcn/ui, Framer Motion. Deployed on Vercel.
+See `website/CLAUDE.md` for website-specific instructions.
+
+## Reference Docs
+- `Vision.md` — product vision and positioning (root)
+- `PRD.md` — product requirements (root)
+- `Architecture.md` — architecture overview (root)
+- `docs/cli/PRD.md` — v0 CLI-specific requirements
+- `docs/cli/ARCHITECTURE.md` — CLI packages, interfaces, data flows
+- `docs/cli/USER_JOURNEYS.md` — exact UX flows and display rules
+- `docs/cli/EVENT_MODEL.md` — every event flow with pseudocode
 
 ## Commit Style
 - Conventional commits: `feat:`, `fix:`, `refactor:`, `docs:`

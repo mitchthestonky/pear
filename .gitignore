@@ -1,5 +1,12 @@
-docs/
-CLAUDE.md
-tickets/
+# Build artifacts
 cli/pear
+
+# Claude Code local config
 .claude/
+
+# Website build artifacts (also covered by website/.gitignore)
+website/node_modules/
+website/.next/
+website/.vercel/
+website/.env.local
+website/tsconfig.tsbuildinfo
