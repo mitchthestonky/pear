@@ -3,6 +3,7 @@ package tui
 import (
 	"strings"
 
+	"github.com/MitchTheStonky/pear/cli/learning"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/glamour"
@@ -122,15 +123,18 @@ func (m *OutputModel) EndStream(width int) {
 		m.thinkingShown = false
 	}
 
+	// Strip concept/related tag lines from stream before rendering
+	streamText := learning.StripTags(m.stream.String())
+
 	// Render final markdown and bake it into content
 	if m.renderer != nil {
-		if r, err := m.renderer.Render(m.stream.String()); err == nil {
+		if r, err := m.renderer.Render(streamText); err == nil {
 			m.content.WriteString(r)
 		} else {
-			m.content.WriteString(m.stream.String())
+			m.content.WriteString(streamText)
 		}
 	} else {
-		m.content.WriteString(m.stream.String())
+		m.content.WriteString(streamText)
 	}
 	m.stream.Reset()
 	m.streaming = false

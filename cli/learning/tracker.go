@@ -25,7 +25,13 @@ type Concept struct {
 var (
 	conceptsRe      = regexp.MustCompile(`📚\s*Concepts:\s*\[(.+?)\]`)
 	relationshipsRe = regexp.MustCompile(`🔗\s*Related:\s*\[(.+?)\]`)
+	tagLineRe       = regexp.MustCompile(`(?m)^.*(?:📚\s*Concepts:|🔗\s*Related:).*$\n?`)
 )
+
+// StripTags removes concept and related tag lines from response text.
+func StripTags(text string) string {
+	return strings.TrimRight(tagLineRe.ReplaceAllString(text, ""), "\n")
+}
 
 func Load(path string) (*ConceptStore, error) {
 	data, err := os.ReadFile(path)
