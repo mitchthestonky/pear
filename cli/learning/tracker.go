@@ -10,6 +10,9 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 type ConceptStore struct {
@@ -56,6 +59,8 @@ func (sm *SessionMemory) FormatCovered() string {
 	}
 	return b.String()
 }
+
+var titleCaser = cases.Title(language.English)
 
 var (
 	conceptsRe      = regexp.MustCompile(`📚\s*Concepts:\s*\[(.+?)\]`)
@@ -127,7 +132,7 @@ func Extract(responseText string) ([]string, map[string][]string, []CoveredEntry
 		for _, c := range strings.Split(match[1], ", ") {
 			c = strings.TrimSpace(c)
 			if c != "" {
-				concepts = append(concepts, c)
+				concepts = append(concepts, normalizeConcept(c))
 			}
 		}
 	}
@@ -139,7 +144,7 @@ func Extract(responseText string) ([]string, map[string][]string, []CoveredEntry
 				from := strings.TrimSpace(parts[0])
 				to := strings.TrimSpace(parts[1])
 				if from != "" && to != "" {
-					relationships[from] = append(relationships[from], to)
+					relationships[normalizeConcept(from)] = append(relationships[normalizeConcept(from)], normalizeConcept(to))
 				}
 			}
 		}
@@ -152,7 +157,7 @@ func Extract(responseText string) ([]string, map[string][]string, []CoveredEntry
 				concept := strings.TrimSpace(parts[0])
 				summary := strings.TrimSpace(parts[1])
 				if concept != "" && summary != "" {
-					covered = append(covered, CoveredEntry{Concept: concept, Summary: summary})
+					covered = append(covered, CoveredEntry{Concept: normalizeConcept(concept), Summary: summary})
 				}
 			}
 		}
@@ -240,6 +245,11 @@ func uniqueSessions(s *ConceptStore) int {
 		}
 	}
 	return len(seen)
+}
+
+// normalizeConcept normalizes concept names to title case for consistent lookups.
+func normalizeConcept(s string) string {
+	return titleCaser.String(strings.ToLower(s))
 }
 
 func contains(slice []string, s string) bool {
