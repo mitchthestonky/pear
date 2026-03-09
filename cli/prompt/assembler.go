@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/MitchTheStonky/pear/cli/learning"
 	"github.com/MitchTheStonky/pear/cli/llm"
 	"github.com/MitchTheStonky/pear/cli/repocontext"
 )
@@ -30,7 +31,8 @@ Behavior:
 
 Tags (end of response):
 📚 Concepts: [...]
-🔗 Related: [... → ...]`
+🔗 Related: [... → ...]
+📝 Covered: [Concept1: angle covered, Concept2: angle covered]`
 
 const reactiveSystem = `You are Pear, a pair programmer answering a developer's question.
 
@@ -45,7 +47,8 @@ Behavior:
 
 Tags (end of response):
 📚 Concepts: [...]
-🔗 Related: [... → ...]`
+🔗 Related: [... → ...]
+📝 Covered: [Concept1: angle covered, Concept2: angle covered]`
 
 const deepDiveSystem = `You are Pear, a pair programmer giving a thorough explanation of a topic.
 
@@ -61,11 +64,12 @@ Behavior:
 
 Tags (end of response):
 📚 Concepts: [...]
-🔗 Related: [... → ...]`
+🔗 Related: [... → ...]
+📝 Covered: [Concept1: angle covered, Concept2: angle covered]`
 
 // Proactive builds system prompt and messages for a proactive code review.
-// History is capped to last 3 messages.
-func Proactive(ctx *repocontext.RepoContext, profile UserProfile, history []llm.Message) (string, []llm.Message) {
+// History is capped to last 3 messages. Session memory is injected into the user message.
+func Proactive(ctx *repocontext.RepoContext, profile UserProfile, history []llm.Message, session *learning.SessionMemory) (string, []llm.Message) {
 	system := fmt.Sprintf(proactiveSystem, profile.Name, profile.Languages, profile.Level)
 
 	var msgs []llm.Message
@@ -77,6 +81,9 @@ func Proactive(ctx *repocontext.RepoContext, profile UserProfile, history []llm.
 	}
 
 	contextBlock := FormatContext(ctx)
+	if covered := session.FormatCovered(); covered != "" {
+		contextBlock = contextBlock + "\n" + covered
+	}
 	msgs = append(msgs, llm.Message{
 		Role:    "user",
 		Content: contextBlock,

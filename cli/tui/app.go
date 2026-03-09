@@ -53,8 +53,9 @@ type Model struct {
 	height     int
 	cancelFn     context.CancelFunc
 	chunkCh      <-chan string
-	conceptStore *learning.ConceptStore
-	learningPath string
+	conceptStore  *learning.ConceptStore
+	learningPath  string
+	sessionMemory *learning.SessionMemory
 	settings     settingsState
 	watcher      *watcher.Watcher
 	watchCancel  context.CancelFunc
@@ -81,8 +82,9 @@ func NewModel(cfg *config.Config, client llm.LLMClient, mode string, triggers <-
 		llmClient:    client,
 		triggers:     triggers,
 		stats:        SessionStats{StartTime: time.Now()},
-		conceptStore: store,
-		learningPath: lpath,
+		conceptStore:  store,
+		learningPath:  lpath,
+		sessionMemory: &learning.SessionMemory{},
 		width:        80,
 		height:       24,
 	}
@@ -196,13 +198,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 			if m.conceptStore != nil {
-				concepts, relationships := learning.Extract(msg.Response.Content)
+				concepts, relationships, covered := learning.Extract(msg.Response.Content)
 				if len(concepts) > 0 {
 					m.output.AppendConcepts(concepts)
 					m.output.AppendRelationships(relationships)
 					m.conceptStore.Record(concepts, relationships)
 					m.stats.Concepts += len(concepts)
 					_ = m.conceptStore.Save(m.learningPath)
+				}
+				for _, entry := range covered {
+					m.sessionMemory.AddCovered(entry.Concept, entry.Summary)
 				}
 			}
 		}

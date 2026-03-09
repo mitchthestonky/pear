@@ -32,7 +32,7 @@ func (m *Model) handleTrigger(trigger ReviewTrigger) tea.Cmd {
 		TriggerInfo:  trigger.Info,
 	}
 
-	systemPrompt, messages := prompt.Proactive(ctx, profile, m.history)
+	systemPrompt, messages := prompt.Proactive(ctx, profile, m.history, m.sessionMemory)
 
 	return m.startStream(systemPrompt, messages)
 }

@@ -64,7 +64,7 @@ var teachCmd = &cobra.Command{
 				contextParts = append(contextParts, fmt.Sprintf("branch: %s", repoCtx.Branch))
 			}
 			printContextLine(contextParts...)
-			systemPrompt, messages = prompt.Proactive(repoCtx, profile, nil)
+			systemPrompt, messages = prompt.Proactive(repoCtx, profile, nil, nil)
 		} else {
 			// Topic: deep dive with auto-selected files
 			topic := args[0]
@@ -119,7 +119,7 @@ var teachCmd = &cobra.Command{
 		if resp != nil {
 			lpath := filepath.Join(config.Dir(), "learning.json")
 			store, _ := learning.Load(lpath)
-			concepts, relationships := learning.Extract(resp.Content)
+			concepts, relationships, _ := learning.Extract(resp.Content)
 			if len(concepts) > 0 {
 				store.Record(concepts, relationships)
 				_ = store.Save(lpath)

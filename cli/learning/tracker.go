@@ -22,10 +22,46 @@ type Concept struct {
 	Related  []string `json:"related"`
 }
 
+// CoveredEntry tracks a concept and the angle covered this session.
+type CoveredEntry struct {
+	Concept string
+	Summary string
+}
+
+// SessionMemory holds ephemeral state for the current session.
+type SessionMemory struct {
+	Covered []CoveredEntry
+}
+
+// AddCovered records a covered concept, deduplicating by concept name (updates summary if seen again).
+func (sm *SessionMemory) AddCovered(concept, summary string) {
+	for i, e := range sm.Covered {
+		if strings.EqualFold(e.Concept, concept) {
+			sm.Covered[i].Summary = summary
+			return
+		}
+	}
+	sm.Covered = append(sm.Covered, CoveredEntry{Concept: concept, Summary: summary})
+}
+
+// FormatCovered returns the "already covered" block for prompt injection. Empty string if nothing covered.
+func (sm *SessionMemory) FormatCovered() string {
+	if sm == nil || len(sm.Covered) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString("Already covered this session (do not repeat the same angle):\n")
+	for _, e := range sm.Covered {
+		fmt.Fprintf(&b, "- %s: %s\n", e.Concept, e.Summary)
+	}
+	return b.String()
+}
+
 var (
 	conceptsRe      = regexp.MustCompile(`📚\s*Concepts:\s*\[(.+?)\]`)
 	relationshipsRe = regexp.MustCompile(`🔗\s*Related:\s*\[(.+?)\]`)
-	tagLineRe       = regexp.MustCompile(`(?m)^.*(?:📚\s*Concepts:|🔗\s*Related:).*$\n?`)
+	coveredRe       = regexp.MustCompile(`📝\s*Covered:\s*\[(.+?)\]`)
+	tagLineRe       = regexp.MustCompile(`(?m)^.*(?:📚\s*Concepts:|🔗\s*Related:|📝\s*Covered:).*$\n?`)
 )
 
 // StripTags removes concept and related tag lines from response text.
@@ -82,9 +118,10 @@ func (s *ConceptStore) Save(path string) error {
 	return os.Rename(tmpName, path)
 }
 
-func Extract(responseText string) ([]string, map[string][]string) {
+func Extract(responseText string) ([]string, map[string][]string, []CoveredEntry) {
 	var concepts []string
 	relationships := make(map[string][]string)
+	var covered []CoveredEntry
 
 	for _, match := range conceptsRe.FindAllStringSubmatch(responseText, -1) {
 		for _, c := range strings.Split(match[1], ", ") {
@@ -108,7 +145,20 @@ func Extract(responseText string) ([]string, map[string][]string) {
 		}
 	}
 
-	return concepts, relationships
+	for _, match := range coveredRe.FindAllStringSubmatch(responseText, -1) {
+		for _, entry := range strings.Split(match[1], ", ") {
+			parts := strings.SplitN(entry, ": ", 2)
+			if len(parts) == 2 {
+				concept := strings.TrimSpace(parts[0])
+				summary := strings.TrimSpace(parts[1])
+				if concept != "" && summary != "" {
+					covered = append(covered, CoveredEntry{Concept: concept, Summary: summary})
+				}
+			}
+		}
+	}
+
+	return concepts, relationships, covered
 }
 
 func (s *ConceptStore) Record(concepts []string, relationships map[string][]string) {
