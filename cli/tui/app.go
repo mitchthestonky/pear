@@ -381,6 +381,8 @@ func (m Model) renderBottom() string {
 		greenDot := lipgloss.NewStyle().Foreground(colorGreen).Render(dot)
 		status = " " + greenDot + lipgloss.NewStyle().Foreground(colorGreen).Bold(true).Render(
 			fmt.Sprintf(" Pear is watching%s%s", dots, pad))
+	} else if m.state == "concept_pick" {
+		status = ConceptPickerStyle.Render(" ↕ Pick a concept to explore")
 	} else if m.state == "streaming" {
 		status = ThinkingStyle.Render(" ✦ Pear is thinking...")
 	} else if m.paused {
