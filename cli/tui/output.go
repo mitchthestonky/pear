@@ -207,7 +207,8 @@ func (m *OutputModel) refreshViewport() {
 		// During streaming, show raw text for smooth character-by-character output.
 		// Glamour re-renders the full buffer on every chunk which causes visible jumps.
 		// Final glamour render happens in EndStream.
-		m.viewport.SetContent(m.content.String() + m.stream.String())
+		// Strip tags so they don't flash before being replaced by styled UI elements.
+		m.viewport.SetContent(m.content.String() + learning.StripTags(m.stream.String()))
 	} else {
 		m.viewport.SetContent(m.content.String())
 	}
