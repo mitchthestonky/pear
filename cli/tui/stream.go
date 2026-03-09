@@ -74,6 +74,31 @@ func (m *Model) handleUserInput(msg SubmitMsg) tea.Cmd {
 	return m.startStream(systemPrompt, messages)
 }
 
+func (m *Model) handleDeepDive(concept string) tea.Cmd {
+	m.state = "streaming"
+	_ = m.input.SetEnabled(false)
+
+	m.output.AppendHeader(fmt.Sprintf("🍐 Deep dive: %s", concept))
+	m.output.StartStream(m.width)
+
+	profile := prompt.UserProfile{
+		Name:      m.config.Name,
+		Languages: m.config.Languages,
+		Level:     m.config.Level,
+	}
+
+	rctx, _ := repocontext.Build(repocontext.CollectOpts{
+		TriggerType: "user",
+		TriggerInfo: "deep dive: " + concept,
+	})
+	if rctx == nil {
+		rctx = &repocontext.RepoContext{}
+	}
+
+	systemPrompt, messages := prompt.DeepDive(rctx, profile, concept)
+	return m.startStream(systemPrompt, messages)
+}
+
 func (m *Model) startStream(systemPrompt string, messages []llm.Message) tea.Cmd {
 	client := m.llmClient
 	opts := llm.StreamOptions{

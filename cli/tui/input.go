@@ -42,6 +42,7 @@ var slashCommands = []slashCommand{
 	{"key", "Update API key"},
 	{"copy", "Copy last response"},
 	{"export", "Export chat to file"},
+	{"deep", "Deep dive on a topic"},
 }
 
 // AutocompleteItem is a single autocomplete suggestion.

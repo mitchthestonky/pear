@@ -24,6 +24,7 @@ func (m *Model) handleSlash(msg SlashMsg) tea.Cmd {
   /exit      — End session
   /watch     — Start file watcher from interactive mode
   /review    — One-shot review of current git diff
+  /deep <t>  — Deep dive on a topic
   /pause     — Pause proactive reviews (watch mode)
   /resume    — Resume proactive reviews (watch mode)
   /status    — Show session status
@@ -135,6 +136,16 @@ func (m *Model) handleSlash(msg SlashMsg) tea.Cmd {
 		m.mode = "watch"
 		m.output.AppendSystem("🍐 File watcher started. Pear will review your changes automatically.")
 		return waitForTrigger(m.triggers)
+
+	case "deep":
+		if msg.Args == "" {
+			m.output.AppendSystem("Usage: /deep <topic>")
+			return nil
+		}
+		if m.state == "streaming" {
+			return nil
+		}
+		return m.handleDeepDive(msg.Args)
 
 	case "review":
 		if m.state == "streaming" {

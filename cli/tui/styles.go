@@ -73,4 +73,12 @@ var ThinkingStyle = lipgloss.NewStyle().
 	Foreground(colorDim).
 	Italic(true)
 
+// ConceptPickerStyle for the "go deeper?" prompt
+var ConceptPickerStyle = lipgloss.NewStyle().
+	Foreground(colorDim).
+	Italic(true)
 
+// ConceptPickerSelectedStyle for the highlighted concept in the picker
+var ConceptPickerSelectedStyle = lipgloss.NewStyle().
+	Foreground(colorGreen).
+	Bold(true)

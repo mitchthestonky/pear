@@ -28,6 +28,7 @@ type StreamDoneMsg struct{ Response *llm.Response }
 type StreamErrorMsg struct{ Err error }
 type ReviewTriggerMsg struct{ Trigger ReviewTrigger }
 type listenTickMsg struct{}
+type conceptPickerDismissMsg struct{}
 
 // SessionStats tracks session metrics.
 type SessionStats struct {
@@ -55,7 +56,9 @@ type Model struct {
 	chunkCh      <-chan string
 	conceptStore  *learning.ConceptStore
 	learningPath  string
-	sessionMemory *learning.SessionMemory
+	sessionMemory  *learning.SessionMemory
+	newConcepts    []string // concepts available in the picker
+	conceptIdx     int      // currently highlighted picker index
 	settings     settingsState
 	watcher      *watcher.Watcher
 	watchCancel  context.CancelFunc
@@ -115,6 +118,37 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyMsg:
+		// Concept picker handles its own keys when active
+		if m.state == "concept_pick" {
+			switch msg.String() {
+			case "ctrl+c":
+				if m.watchCancel != nil {
+					m.watchCancel()
+				}
+				return m, tea.Quit
+			case "up":
+				if m.conceptIdx > 0 {
+					m.conceptIdx--
+					m.output.ShowConceptPicker(m.newConcepts, m.conceptIdx)
+				}
+				return m, nil
+			case "down":
+				if m.conceptIdx < len(m.newConcepts)-1 {
+					m.conceptIdx++
+					m.output.ShowConceptPicker(m.newConcepts, m.conceptIdx)
+				}
+				return m, nil
+			case "enter":
+				concept := m.newConcepts[m.conceptIdx]
+				m.dismissConceptPicker()
+				return m, m.handleDeepDive(concept)
+			case "esc":
+				m.dismissConceptPicker()
+				return m, nil
+			}
+			return m, nil
+		}
+
 		switch msg.String() {
 		case "ctrl+c":
 			if m.watchCancel != nil {
@@ -147,7 +181,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case conceptPickerDismissMsg:
+		if m.state == "concept_pick" {
+			m.dismissConceptPicker()
+		}
+		return m, nil
+
 	case ReviewTriggerMsg:
+		if m.state == "concept_pick" {
+			m.dismissConceptPicker()
+		}
 		if m.paused {
 			return m, waitForTrigger(m.triggers)
 		}
@@ -164,7 +207,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case SubmitMsg:
 		m.consecutiveErrors = 0
-		if m.state == "streaming" {
+		if m.state == "streaming" || m.state == "concept_pick" {
 			return m, nil
 		}
 		if m.settings.active {
@@ -200,11 +243,29 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.conceptStore != nil {
 				concepts, relationships, covered := learning.Extract(msg.Response.Content)
 				if len(concepts) > 0 {
+					// Check for new concepts before recording (so counts are still 0)
+					var newConcepts []string
+					for _, c := range concepts {
+						if existing, ok := m.conceptStore.Concepts[c]; !ok || existing.Count == 0 {
+							newConcepts = append(newConcepts, c)
+						}
+					}
+
 					m.output.AppendConcepts(concepts)
 					m.output.AppendRelationships(relationships)
 					m.conceptStore.Record(concepts, relationships)
 					m.stats.Concepts += len(concepts)
 					_ = m.conceptStore.Save(m.learningPath)
+
+					// Show concept picker if there are new concepts
+					if len(newConcepts) > 0 {
+						m.newConcepts = newConcepts
+						m.conceptIdx = 0
+						m.state = "concept_pick"
+						_ = m.input.SetEnabled(false)
+						m.output.ShowConceptPicker(newConcepts, 0)
+						cmds = append(cmds, conceptPickerTimeout())
+					}
 				}
 				for _, entry := range covered {
 					m.sessionMemory.AddCovered(entry.Concept, entry.Summary)
@@ -389,4 +450,18 @@ func waitForChunk(ch <-chan string) tea.Cmd {
 		}
 		return ChunkMsg{Text: chunk}
 	}
+}
+
+func conceptPickerTimeout() tea.Cmd {
+	return tea.Tick(60*time.Second, func(time.Time) tea.Msg {
+		return conceptPickerDismissMsg{}
+	})
+}
+
+func (m *Model) dismissConceptPicker() {
+	m.output.RemoveConceptPicker()
+	m.newConcepts = nil
+	m.conceptIdx = 0
+	m.state = "idle"
+	_ = m.input.SetEnabled(true)
 }

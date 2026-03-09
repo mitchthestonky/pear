@@ -170,6 +170,51 @@ func (m *OutputModel) AppendRelationships(relationships map[string][]string) {
 	m.refreshViewport()
 }
 
+// ShowConceptPicker renders the concept picker into the output.
+func (m *OutputModel) ShowConceptPicker(concepts []string, selectedIdx int) {
+	m.bannerOnly = false
+	// Remove any previous picker content
+	m.removeConceptPicker()
+
+	var b strings.Builder
+	b.WriteString(ConceptPickerStyle.Render("  New concepts — want to go deeper?"))
+	b.WriteString("\n")
+	for i, c := range concepts {
+		if i == selectedIdx {
+			b.WriteString(ConceptPickerSelectedStyle.Render("  > " + c))
+		} else {
+			b.WriteString(ConceptPickerStyle.Render("    " + c))
+		}
+		b.WriteString("\n")
+	}
+	b.WriteString(ConceptPickerStyle.Render("  Enter to explore · Esc to dismiss"))
+	b.WriteString("\n")
+
+	m.content.WriteString(pickerStartMarker)
+	m.content.WriteString(b.String())
+	m.content.WriteString(pickerEndMarker)
+	m.refreshViewport()
+}
+
+// RemoveConceptPicker removes the picker from the output.
+func (m *OutputModel) RemoveConceptPicker() {
+	m.removeConceptPicker()
+	m.refreshViewport()
+}
+
+const pickerStartMarker = "\x00PICKER_START\x00"
+const pickerEndMarker = "\x00PICKER_END\x00"
+
+func (m *OutputModel) removeConceptPicker() {
+	s := m.content.String()
+	startIdx := strings.Index(s, pickerStartMarker)
+	endIdx := strings.Index(s, pickerEndMarker)
+	if startIdx >= 0 && endIdx >= 0 {
+		m.content.Reset()
+		m.content.WriteString(s[:startIdx] + s[endIdx+len(pickerEndMarker):])
+	}
+}
+
 // AppendError adds an error message.
 func (m *OutputModel) AppendError(text string) {
 	m.bannerOnly = false
