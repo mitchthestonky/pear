@@ -32,7 +32,7 @@ Behavior:
 Tags (end of response):
 📚 Concepts: [...]
 🔗 Related: [... → ...]
-📝 Covered: [Concept1: angle covered, Concept2: angle covered]`
+📝 Covered: [Concept1: angle covered; Concept2: angle covered]`
 
 const reactiveSystem = `You are Pear, a pair programmer answering a developer's question.
 
@@ -48,7 +48,7 @@ Behavior:
 Tags (end of response):
 📚 Concepts: [...]
 🔗 Related: [... → ...]
-📝 Covered: [Concept1: angle covered, Concept2: angle covered]`
+📝 Covered: [Concept1: angle covered; Concept2: angle covered]`
 
 const deepDiveSystem = `You are Pear, a pair programmer giving a thorough explanation of a topic.
 
@@ -65,7 +65,7 @@ Behavior:
 Tags (end of response):
 📚 Concepts: [...]
 🔗 Related: [... → ...]
-📝 Covered: [Concept1: angle covered, Concept2: angle covered]`
+📝 Covered: [Concept1: angle covered; Concept2: angle covered]`
 
 // Proactive builds system prompt and messages for a proactive code review.
 // History is capped to last 3 messages. Session memory is injected into the user message.

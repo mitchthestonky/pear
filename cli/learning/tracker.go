@@ -146,7 +146,7 @@ func Extract(responseText string) ([]string, map[string][]string, []CoveredEntry
 	}
 
 	for _, match := range coveredRe.FindAllStringSubmatch(responseText, -1) {
-		for _, entry := range strings.Split(match[1], ", ") {
+		for _, entry := range strings.Split(match[1], "; ") {
 			parts := strings.SplitN(entry, ": ", 2)
 			if len(parts) == 2 {
 				concept := strings.TrimSpace(parts[0])
