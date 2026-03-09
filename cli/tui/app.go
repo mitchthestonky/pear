@@ -142,11 +142,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			case "enter":
 				concept := m.newConcepts[m.conceptIdx]
-				m.dismissConceptPicker()
+				_ = m.dismissConceptPicker() // deep dive overrides the idle state anyway
 				return m, m.handleDeepDive(concept)
 			case "esc":
-				m.dismissConceptPicker()
-				return m, nil
+				return m, m.dismissConceptPicker()
 			}
 			return m, nil
 		}
@@ -185,13 +184,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case conceptPickerDismissMsg:
 		if m.state == "concept_pick" {
-			m.dismissConceptPicker()
+			return m, m.dismissConceptPicker()
 		}
 		return m, nil
 
 	case ReviewTriggerMsg:
 		if m.state == "concept_pick" {
-			m.dismissConceptPicker()
+			_ = m.dismissConceptPicker() // trigger handling below takes over
 		}
 		if m.paused {
 			return m, waitForTrigger(m.triggers)
@@ -460,10 +459,14 @@ func conceptPickerTimeout() tea.Cmd {
 	})
 }
 
-func (m *Model) dismissConceptPicker() {
+func (m *Model) dismissConceptPicker() tea.Cmd {
 	m.output.RemoveConceptPicker()
 	m.newConcepts = nil
 	m.conceptIdx = 0
 	m.state = "idle"
 	_ = m.input.SetEnabled(true)
+	if m.mode == "watch" {
+		return listenTick()
+	}
+	return nil
 }
