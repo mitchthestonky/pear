@@ -63,10 +63,16 @@ func (sm *SessionMemory) FormatCovered() string {
 var titleCaser = cases.Title(language.English)
 
 var (
-	conceptsRe      = regexp.MustCompile(`📚\s*Concepts:\s*\[(.+?)\]`)
-	relationshipsRe = regexp.MustCompile(`🔗\s*Related:\s*\[(.+?)\]`)
-	coveredRe       = regexp.MustCompile(`📝\s*Covered:\s*\[(.+?)\]`)
-	tagLineRe       = regexp.MustCompile(`(?m)^.*(?:📚\s*Concepts:|🔗\s*Related:|📝\s*Covered:).*$\n?`)
+	// Bracketed format: 📚 Concepts: [A, B, C]
+	conceptsBracketRe = regexp.MustCompile(`📚\s*Concepts:\s*\[(.+?)\]`)
+	relBracketRe      = regexp.MustCompile(`🔗\s*Related:\s*\[(.+?)\]`)
+	coveredRe         = regexp.MustCompile(`📝\s*Covered:\s*\[(.+?)\]`)
+
+	// Inline format without brackets: 📚 Concepts: A, B, C (on same line)
+	conceptsInlineRe = regexp.MustCompile(`(?m)^📚\s*Concepts:\s*(.+)$`)
+	relInlineRe      = regexp.MustCompile(`(?m)^🔗\s*Related:\s*(.+)$`)
+
+	tagLineRe = regexp.MustCompile(`(?m)^.*(?:📚\s*Concepts:|🔗\s*Related:|📝\s*Covered:).*$\n?`)
 )
 
 // StripTags removes concept and related tag lines from response text.
@@ -128,27 +134,8 @@ func Extract(responseText string) ([]string, map[string][]string, []CoveredEntry
 	relationships := make(map[string][]string)
 	var covered []CoveredEntry
 
-	for _, match := range conceptsRe.FindAllStringSubmatch(responseText, -1) {
-		for _, c := range strings.Split(match[1], ", ") {
-			c = strings.TrimSpace(c)
-			if c != "" {
-				concepts = append(concepts, normalizeConcept(c))
-			}
-		}
-	}
-
-	for _, match := range relationshipsRe.FindAllStringSubmatch(responseText, -1) {
-		for _, pair := range strings.Split(match[1], ", ") {
-			parts := strings.SplitN(pair, " → ", 2)
-			if len(parts) == 2 {
-				from := strings.TrimSpace(parts[0])
-				to := strings.TrimSpace(parts[1])
-				if from != "" && to != "" {
-					relationships[normalizeConcept(from)] = append(relationships[normalizeConcept(from)], normalizeConcept(to))
-				}
-			}
-		}
-	}
+	concepts = extractConceptList(responseText, conceptsBracketRe, conceptsInlineRe)
+	relationships = extractRelationships(responseText, relBracketRe, relInlineRe)
 
 	for _, match := range coveredRe.FindAllStringSubmatch(responseText, -1) {
 		for _, entry := range strings.Split(match[1], "; ") {
@@ -245,6 +232,145 @@ func uniqueSessions(s *ConceptStore) int {
 		}
 	}
 	return len(seen)
+}
+
+// extractConceptList parses concepts from bracketed, inline, or newline-separated formats.
+func extractConceptList(text string, bracketRe, inlineRe *regexp.Regexp) []string {
+	var concepts []string
+
+	// Try bracketed: 📚 Concepts: [A, B, C]
+	if matches := bracketRe.FindAllStringSubmatch(text, -1); len(matches) > 0 {
+		for _, match := range matches {
+			for _, c := range strings.Split(match[1], ", ") {
+				c = strings.TrimSpace(c)
+				if c != "" {
+					concepts = append(concepts, normalizeConcept(c))
+				}
+			}
+		}
+		return concepts
+	}
+
+	// Try inline (same line, with or without brackets): 📚 Concepts: A, B, C
+	if matches := inlineRe.FindAllStringSubmatch(text, -1); len(matches) > 0 {
+		for _, match := range matches {
+			inner := strings.TrimSpace(match[1])
+			inner = strings.TrimPrefix(inner, "[")
+			inner = strings.TrimSuffix(inner, "]")
+			if inner == "" {
+				continue
+			}
+			for _, c := range strings.Split(inner, ", ") {
+				c = strings.TrimSpace(c)
+				if c != "" {
+					concepts = append(concepts, normalizeConcept(c))
+				}
+			}
+		}
+		return concepts
+	}
+
+	// Try newline-separated: 📚 Concepts:\nA\nB\nC
+	lines := strings.Split(text, "\n")
+	inBlock := false
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.Contains(trimmed, "📚") && strings.Contains(trimmed, "Concepts") {
+			// Check if concepts are on the same line after the colon
+			if idx := strings.Index(trimmed, ":"); idx >= 0 {
+				after := strings.TrimSpace(trimmed[idx+1:])
+				if after != "" {
+					// Same line, already handled above
+					break
+				}
+			}
+			inBlock = true
+			continue
+		}
+		if inBlock {
+			if trimmed == "" || strings.Contains(trimmed, "🔗") || strings.Contains(trimmed, "📝") {
+				break
+			}
+			c := strings.TrimLeft(trimmed, "- •*")
+			c = strings.TrimSpace(c)
+			if c != "" {
+				concepts = append(concepts, normalizeConcept(c))
+			}
+		}
+	}
+
+	return concepts
+}
+
+// extractRelationships parses relationships from bracketed, inline, or newline-separated formats.
+func extractRelationships(text string, bracketRe, inlineRe *regexp.Regexp) map[string][]string {
+	relationships := make(map[string][]string)
+
+	parseRelPairs := func(inner string) {
+		for _, pair := range strings.Split(inner, ", ") {
+			parts := strings.SplitN(pair, " → ", 2)
+			if len(parts) == 2 {
+				from := strings.TrimSpace(parts[0])
+				to := strings.TrimSpace(parts[1])
+				if from != "" && to != "" {
+					relationships[normalizeConcept(from)] = append(relationships[normalizeConcept(from)], normalizeConcept(to))
+				}
+			}
+		}
+	}
+
+	// Try bracketed
+	if matches := bracketRe.FindAllStringSubmatch(text, -1); len(matches) > 0 {
+		for _, match := range matches {
+			parseRelPairs(match[1])
+		}
+		return relationships
+	}
+
+	// Try inline
+	if matches := inlineRe.FindAllStringSubmatch(text, -1); len(matches) > 0 {
+		for _, match := range matches {
+			inner := strings.TrimSpace(match[1])
+			inner = strings.TrimPrefix(inner, "[")
+			inner = strings.TrimSuffix(inner, "]")
+			parseRelPairs(inner)
+		}
+		return relationships
+	}
+
+	// Try newline-separated
+	lines := strings.Split(text, "\n")
+	inBlock := false
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.Contains(trimmed, "🔗") && strings.Contains(trimmed, "Related") {
+			if idx := strings.Index(trimmed, ":"); idx >= 0 {
+				after := strings.TrimSpace(trimmed[idx+1:])
+				if after != "" {
+					break
+				}
+			}
+			inBlock = true
+			continue
+		}
+		if inBlock {
+			if trimmed == "" || strings.Contains(trimmed, "📝") || strings.Contains(trimmed, "📚") {
+				break
+			}
+			pair := strings.TrimLeft(trimmed, "- •*")
+			pair = strings.TrimSpace(pair)
+			parts := strings.SplitN(pair, " → ", 2)
+			if len(parts) == 2 {
+				from := strings.TrimSpace(parts[0])
+				to := strings.TrimSpace(parts[1])
+				if from != "" && to != "" {
+					relationships[normalizeConcept(from)] = append(relationships[normalizeConcept(from)], normalizeConcept(to))
+				}
+			}
+		}
+	}
+
+	return relationships
 }
 
 // normalizeConcept normalizes concept names to title case for consistent lookups.
