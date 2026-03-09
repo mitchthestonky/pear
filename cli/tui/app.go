@@ -12,6 +12,7 @@ import (
 	"github.com/MitchTheStonky/pear/cli/config"
 	"github.com/MitchTheStonky/pear/cli/learning"
 	"github.com/MitchTheStonky/pear/cli/llm"
+	"github.com/MitchTheStonky/pear/cli/repocontext"
 	"github.com/MitchTheStonky/pear/cli/watcher"
 )
 
@@ -57,8 +58,9 @@ type Model struct {
 	conceptStore  *learning.ConceptStore
 	learningPath  string
 	sessionMemory  *learning.SessionMemory
-	newConcepts    []string // concepts available in the picker
-	conceptIdx     int      // currently highlighted picker index
+	newConcepts      []string // concepts available in the picker
+	conceptIdx       int      // currently highlighted picker index
+	lastReviewCtx    *repocontext.RepoContext
 	settings     settingsState
 	watcher      *watcher.Watcher
 	watchCancel  context.CancelFunc

@@ -31,6 +31,7 @@ func (m *Model) handleTrigger(trigger ReviewTrigger) tea.Cmd {
 		TriggerType:  trigger.TriggerType,
 		TriggerInfo:  trigger.Info,
 	}
+	m.lastReviewCtx = ctx
 
 	systemPrompt, messages := prompt.Proactive(ctx, profile, m.history, m.sessionMemory)
 
@@ -87,12 +88,16 @@ func (m *Model) handleDeepDive(concept string) tea.Cmd {
 		Level:     m.config.Level,
 	}
 
-	rctx, _ := repocontext.Build(repocontext.CollectOpts{
-		TriggerType: "user",
-		TriggerInfo: "deep dive: " + concept,
-	})
+	// Use the last review's context if available (picker flow), otherwise build fresh
+	rctx := m.lastReviewCtx
 	if rctx == nil {
-		rctx = &repocontext.RepoContext{}
+		rctx, _ = repocontext.Build(repocontext.CollectOpts{
+			TriggerType: "user",
+			TriggerInfo: "deep dive: " + concept,
+		})
+		if rctx == nil {
+			rctx = &repocontext.RepoContext{}
+		}
 	}
 
 	systemPrompt, messages := prompt.DeepDive(rctx, profile, concept)
