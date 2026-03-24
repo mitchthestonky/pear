@@ -33,7 +33,7 @@ func (m *Model) handleTrigger(trigger ReviewTrigger) tea.Cmd {
 	}
 	m.lastReviewCtx = ctx
 
-	systemPrompt, messages := prompt.Proactive(ctx, profile, m.history, m.sessionMemory)
+	systemPrompt, messages := prompt.Proactive(ctx, profile, m.history, m.sessionMemory, m.conceptStore)
 
 	return m.startStream(systemPrompt, messages)
 }

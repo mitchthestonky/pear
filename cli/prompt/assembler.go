@@ -68,8 +68,15 @@ Tags (MUST be on a single line each, with square brackets, comma-separated):
 
 // Proactive builds system prompt and messages for a proactive code review.
 // History is capped to last 3 messages. Session memory is injected into the user message.
-func Proactive(ctx *repocontext.RepoContext, profile UserProfile, history []llm.Message, session *learning.SessionMemory) (string, []llm.Message) {
+// Known concepts (top 10) and session covered are appended to the system prompt.
+func Proactive(ctx *repocontext.RepoContext, profile UserProfile, history []llm.Message, session *learning.SessionMemory, store *learning.ConceptStore) (string, []llm.Message) {
 	system := fmt.Sprintf(proactiveSystem, profile.Name, profile.Languages, profile.Level)
+
+	if store != nil {
+		if known := store.FormatKnownConcepts(10); known != "" {
+			system += "\n" + known
+		}
+	}
 
 	var msgs []llm.Message
 	// Include last 3 history messages

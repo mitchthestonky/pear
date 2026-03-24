@@ -234,6 +234,58 @@ func uniqueSessions(s *ConceptStore) int {
 	return len(seen)
 }
 
+// FormatKnownConcepts returns the top N concepts by count, formatted for prompt injection.
+func (s *ConceptStore) FormatKnownConcepts(n int) string {
+	if len(s.Concepts) == 0 {
+		return ""
+	}
+
+	type entry struct {
+		name    string
+		concept *Concept
+	}
+
+	var entries []entry
+	for name, c := range s.Concepts {
+		entries = append(entries, entry{name, c})
+	}
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].concept.Count > entries[j].concept.Count
+	})
+
+	if n > len(entries) {
+		n = len(entries)
+	}
+
+	var b strings.Builder
+	b.WriteString("\nDeveloper's known concepts (seen count):\n")
+	for _, e := range entries[:n] {
+		fmt.Fprintf(&b, "- %s (%d)\n", e.name, e.concept.Count)
+	}
+
+	// Add relationships for included concepts
+	var rels []string
+	included := make(map[string]bool)
+	for _, e := range entries[:n] {
+		included[e.name] = true
+	}
+	for _, e := range entries[:n] {
+		for _, rel := range e.concept.Related {
+			if included[rel] {
+				rels = append(rels, fmt.Sprintf("%s → %s", e.name, rel))
+			}
+		}
+	}
+	if len(rels) > 0 {
+		for _, r := range rels {
+			fmt.Fprintf(&b, "  → %s\n", r)
+		}
+	}
+
+	b.WriteString("\nDo not re-explain these at a basic level. Build on them or cover new angles.")
+	return b.String()
+}
+
 // extractConceptList parses concepts from bracketed, inline, or newline-separated formats.
 func extractConceptList(text string, bracketRe, inlineRe *regexp.Regexp) []string {
 	var concepts []string

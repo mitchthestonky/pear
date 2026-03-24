@@ -66,7 +66,9 @@ var reviewCmd = &cobra.Command{
 			Level:     cfg.Level,
 		}
 
-		systemPrompt, messages := prompt.Proactive(repoCtx, profile, nil, nil)
+		lpath := filepath.Join(config.Dir(), "learning.json")
+		store, _ := learning.Load(lpath)
+		systemPrompt, messages := prompt.Proactive(repoCtx, profile, nil, nil, store)
 
 		streamOpts := llm.StreamOptions{
 			SystemPrompt: systemPrompt,
