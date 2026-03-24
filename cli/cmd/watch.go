@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"os"
@@ -60,21 +59,15 @@ var watchCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		// Check dirty diff at startup
+		// Check dirty diff at startup — auto-send as first trigger
 		baselineDiff := w.BaselineDiff()
 		var initialTrigger *tui.ReviewTrigger
 		if strings.TrimSpace(baselineDiff) != "" {
 			lines := strings.Count(baselineDiff, "\n")
-			fmt.Printf("🍐 You have uncommitted changes (%d lines). Review them now? [y/N] ", lines)
-			reader := bufio.NewReader(os.Stdin)
-			answer, _ := reader.ReadString('\n')
-			answer = strings.TrimSpace(strings.ToLower(answer))
-			if answer == "y" || answer == "yes" {
-				initialTrigger = &tui.ReviewTrigger{
-					Diff:        baselineDiff,
-					TriggerType: "settle",
-					Info:        fmt.Sprintf("made changes (%d lines)", lines),
-				}
+			initialTrigger = &tui.ReviewTrigger{
+				Diff:        baselineDiff,
+				TriggerType: "settle",
+				Info:        fmt.Sprintf("have uncommitted changes (%d lines)", lines),
 			}
 		}
 
