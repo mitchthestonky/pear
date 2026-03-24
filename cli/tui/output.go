@@ -29,6 +29,7 @@ type OutputModel struct {
 // NewOutputModel creates a new output component.
 func NewOutputModel(width, height int) OutputModel {
 	vp := viewport.New(width, height)
+	vp.MouseWheelEnabled = true
 	vp.SetContent("")
 
 	r, _ := glamour.NewTermRenderer(
@@ -223,9 +224,10 @@ func (m *OutputModel) AppendError(text string) {
 	m.refreshViewport()
 }
 
-// AppendSystem adds a system message.
+// AppendSystem adds a system message with a paragraph break before it.
 func (m *OutputModel) AppendSystem(text string) {
 	m.bannerOnly = false
+	m.content.WriteString("\n")
 	m.content.WriteString(SystemStyle.Render(text))
 	m.content.WriteString("\n")
 	m.refreshViewport()
