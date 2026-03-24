@@ -68,6 +68,13 @@ func runInitWizard() {
 	if ok {
 		fmt.Println()
 		fmt.Println("🍐 You're all set! Pear is ready to help you learn.")
+		fmt.Println()
+		fmt.Println("🔒 Privacy:")
+		fmt.Println("   • Code diffs are sent to your LLM provider")
+		fmt.Println("     (using your API key) for analysis")
+		fmt.Println("   • Learning data stored locally at ~/.pear/")
+		fmt.Println("   • No telemetry, no analytics, no tracking")
+		fmt.Println("   • Pear never phones home")
 	} else {
 		fmt.Println()
 		fmt.Println("Some checks failed. Run `pear doctor` after fixing the issues.")
