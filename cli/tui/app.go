@@ -209,8 +209,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case SubmitMsg:
 		m.consecutiveErrors = 0
-		if m.state == "streaming" || m.state == "concept_pick" {
+		if m.state == "streaming" {
 			return m, nil
+		}
+		if m.state == "concept_pick" {
+			_ = m.dismissConceptPicker()
 		}
 		if m.settings.active {
 			m.handleSettingsInput(msg.Text)
@@ -259,13 +262,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.stats.Concepts += len(concepts)
 					_ = m.conceptStore.Save(m.learningPath)
 
-					// Show concept picker if there are new concepts
+					// Show concept picker if there are new concepts (non-blocking: input stays enabled)
 					if len(newConcepts) > 0 {
 						m.conceptPickerGen++
 						m.newConcepts = newConcepts
 						m.conceptIdx = 0
 						m.state = "concept_pick"
-						_ = m.input.SetEnabled(false)
 						m.output.ShowConceptPicker(newConcepts, 0)
 						cmds = append(cmds, conceptPickerTimeout(m.conceptPickerGen))
 					}
@@ -458,7 +460,7 @@ func waitForChunk(ch <-chan string) tea.Cmd {
 }
 
 func conceptPickerTimeout(gen int) tea.Cmd {
-	return tea.Tick(15*time.Second, func(time.Time) tea.Msg {
+	return tea.Tick(10*time.Second, func(time.Time) tea.Msg {
 		return conceptPickerDismissMsg{gen: gen}
 	})
 }
@@ -468,7 +470,6 @@ func (m *Model) dismissConceptPicker() tea.Cmd {
 	m.newConcepts = nil
 	m.conceptIdx = 0
 	m.state = "idle"
-	_ = m.input.SetEnabled(true)
 	if m.mode == "watch" {
 		return listenTick()
 	}
