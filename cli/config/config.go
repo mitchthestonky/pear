@@ -141,7 +141,7 @@ func SetKey(cfg *Config, key string) {
 
 func applyDefaults(cfg *Config) {
 	if cfg.Watch.SettleTime == 0 {
-		cfg.Watch.SettleTime = 30
+		cfg.Watch.SettleTime = 15
 	}
 	if cfg.Watch.Interval == 0 {
 		cfg.Watch.Interval = 5
