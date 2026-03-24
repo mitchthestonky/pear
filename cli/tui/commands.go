@@ -27,6 +27,7 @@ func (m *Model) handleSlash(msg SlashMsg) tea.Cmd {
   /deep <t>  — Deep dive on a topic
   /pause     — Pause proactive reviews (watch mode)
   /resume    — Resume proactive reviews (watch mode)
+  /progress  — Show your learning progress
   /status    — Show session status
   /settings  — Edit configuration
   /provider  — Change LLM provider
@@ -164,6 +165,15 @@ func (m *Model) handleSlash(msg SlashMsg) tea.Cmd {
 			Info:        fmt.Sprintf("made changes (%d lines)", lines),
 		}
 		return m.handleTrigger(trigger)
+
+	case "progress":
+		if m.conceptStore == nil || len(m.conceptStore.Concepts) == 0 {
+			m.output.AppendSystem("No concepts tracked yet. Start a session with `pear watch`.")
+			return nil
+		}
+		var buf strings.Builder
+		m.conceptStore.Display(&buf)
+		m.output.AppendSystem(buf.String())
 
 	case "copy":
 		// Find the last assistant message
