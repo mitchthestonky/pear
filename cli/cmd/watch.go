@@ -64,7 +64,7 @@ var watchCmd = &cobra.Command{
 		var initialTrigger *tui.ReviewTrigger
 		if strings.TrimSpace(baselineDiff) != "" {
 			lines := strings.Count(baselineDiff, "\n")
-			if lines <= 200 {
+			if lines <= 500 {
 				initialTrigger = &tui.ReviewTrigger{
 					Diff:        baselineDiff,
 					TriggerType: "settle",
