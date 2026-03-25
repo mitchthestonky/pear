@@ -99,7 +99,7 @@ func WelcomeBanner(cfg *config.Config, width int) string {
 	topBorder := versionLabel + dim.Render(strings.Repeat("─", max(0, width-12)))
 	bottomBorder := dim.Render(strings.Repeat("─", width))
 
-	privacy := dim.Render("🔒 Diffs sent to your LLM provider via your API key. No telemetry. Learning data stays at ~/.pear/.")
+	privacy := dim.Render("🔒 Diffs sent to your LLM provider via your API key. No telemetry. Learning data stays at " + config.Dir() + ".")
 
 	return lipgloss.JoinVertical(lipgloss.Left,
 		topBorder,
