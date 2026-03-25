@@ -172,7 +172,7 @@ func (m *Model) handleSlash(msg SlashMsg) tea.Cmd {
 			return nil
 		}
 		var buf strings.Builder
-		m.conceptStore.Display(&buf)
+		m.conceptStore.DisplayCompact(&buf, 5)
 		m.output.AppendSystem(buf.String())
 
 	case "copy":

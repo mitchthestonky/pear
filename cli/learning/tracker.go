@@ -216,6 +216,42 @@ func (s *ConceptStore) Display(w io.Writer) {
 	fmt.Fprintf(w, "\n  %d concepts across %d sessions\n", len(s.Concepts), totalSessions)
 }
 
+// DisplayCompact writes a short summary (top N concepts) to w.
+func (s *ConceptStore) DisplayCompact(w io.Writer, n int) {
+	if len(s.Concepts) == 0 {
+		fmt.Fprintln(w, "No concepts tracked yet. Start a session with `pear watch`.")
+		return
+	}
+
+	type entry struct {
+		name    string
+		concept *Concept
+	}
+
+	var entries []entry
+	for name, c := range s.Concepts {
+		entries = append(entries, entry{name, c})
+	}
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].concept.Count > entries[j].concept.Count
+	})
+
+	maxCount := entries[0].concept.Count
+	show := n
+	if show > len(entries) {
+		show = len(entries)
+	}
+
+	fmt.Fprintln(w, "🍐 Your top concepts:")
+	for _, e := range entries[:show] {
+		bar := progressBar(e.concept.Count, maxCount, 10)
+		fmt.Fprintf(w, "  %-20s %s  ×%d\n", e.name, bar, e.concept.Count)
+	}
+	if len(entries) > show {
+		fmt.Fprintf(w, "  ... and %d more. Run `pear progress` for full list.\n", len(entries)-show)
+	}
+}
+
 func progressBar(count, max, width int) string {
 	filled := (count * width) / max
 	if filled == 0 && count > 0 {

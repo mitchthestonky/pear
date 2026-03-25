@@ -40,6 +40,7 @@ var slashCommands = []slashCommand{
 	{"provider", "Change LLM provider"},
 	{"model", "Change model"},
 	{"key", "Update API key"},
+	{"progress", "Learning progress"},
 	{"copy", "Copy last response"},
 	{"export", "Export chat to file"},
 	{"deep", "Deep dive on a topic"},
