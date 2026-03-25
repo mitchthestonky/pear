@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/MitchTheStonky/pear/cli/config"
 	"github.com/MitchTheStonky/pear/cli/learning"
@@ -14,7 +13,7 @@ var progressCmd = &cobra.Command{
 	Use:   "progress",
 	Short: "Show learning progress",
 	Run: func(cmd *cobra.Command, args []string) {
-		path := filepath.Join(config.Dir(), "learning.json")
+		path := config.LearningPath()
 		store, err := learning.Load(path)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading learning data: %v\n", err)

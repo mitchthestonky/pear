@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/MitchTheStonky/pear/cli/config"
 	"github.com/MitchTheStonky/pear/cli/learning"
@@ -68,7 +67,7 @@ var askCmd = &cobra.Command{
 		}
 
 		if resp != nil {
-			lpath := filepath.Join(config.Dir(), "learning.json")
+			lpath := config.LearningPath()
 			store, _ := learning.Load(lpath)
 			concepts, relationships, _ := learning.Extract(resp.Content)
 			if len(concepts) > 0 {

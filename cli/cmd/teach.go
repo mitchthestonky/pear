@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"sort"
 	"strings"
 
@@ -64,7 +63,7 @@ var teachCmd = &cobra.Command{
 				contextParts = append(contextParts, fmt.Sprintf("branch: %s", repoCtx.Branch))
 			}
 			printContextLine(contextParts...)
-			lpath := filepath.Join(config.Dir(), "learning.json")
+			lpath := config.LearningPath()
 			store, _ := learning.Load(lpath)
 			systemPrompt, messages = prompt.Proactive(repoCtx, profile, nil, nil, store)
 		} else {
@@ -119,7 +118,7 @@ var teachCmd = &cobra.Command{
 		}
 
 		if resp != nil {
-			lpath := filepath.Join(config.Dir(), "learning.json")
+			lpath := config.LearningPath()
 			store, _ := learning.Load(lpath)
 			concepts, relationships, _ := learning.Extract(resp.Content)
 			if len(concepts) > 0 {

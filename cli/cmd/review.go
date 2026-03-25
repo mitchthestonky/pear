@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/MitchTheStonky/pear/cli/config"
@@ -66,7 +65,7 @@ var reviewCmd = &cobra.Command{
 			Level:     cfg.Level,
 		}
 
-		lpath := filepath.Join(config.Dir(), "learning.json")
+		lpath := config.LearningPath()
 		store, _ := learning.Load(lpath)
 		systemPrompt, messages := prompt.Proactive(repoCtx, profile, nil, nil, store)
 
@@ -87,7 +86,7 @@ var reviewCmd = &cobra.Command{
 		}
 
 		if resp != nil {
-			lpath := filepath.Join(config.Dir(), "learning.json")
+			lpath := config.LearningPath()
 			store, _ := learning.Load(lpath)
 			concepts, relationships, _ := learning.Extract(resp.Content)
 			if len(concepts) > 0 {

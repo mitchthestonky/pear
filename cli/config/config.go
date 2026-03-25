@@ -45,6 +45,11 @@ func configPath() string {
 	return filepath.Join(Dir(), "config.toml")
 }
 
+// LearningPath returns the path to the learning.json file.
+func LearningPath() string {
+	return filepath.Join(Dir(), "learning.json")
+}
+
 func Exists() bool {
 	_, err := os.Stat(configPath())
 	return err == nil
