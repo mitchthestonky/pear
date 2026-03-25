@@ -78,6 +78,7 @@ func (m *OutputModel) AppendHeader(text string) {
 // AppendUserMessage displays the user's input in the log.
 func (m *OutputModel) AppendUserMessage(text string) {
 	m.bannerOnly = false
+	m.content.WriteString("\n")
 	m.content.WriteString(UserMessageStyle.Render("❯ " + text))
 	m.content.WriteString("\n")
 	m.refreshViewport()
@@ -219,6 +220,7 @@ func (m *OutputModel) removeConceptPicker() {
 // AppendError adds an error message.
 func (m *OutputModel) AppendError(text string) {
 	m.bannerOnly = false
+	m.content.WriteString("\n")
 	m.content.WriteString(ErrorStyle.Render("⚠ " + text))
 	m.content.WriteString("\n")
 	m.refreshViewport()
