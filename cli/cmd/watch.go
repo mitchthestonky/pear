@@ -59,15 +59,17 @@ var watchCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		// Check dirty diff at startup — auto-send as first trigger
+		// Check dirty diff at startup — auto-send as first trigger if under 200 lines
 		baselineDiff := w.BaselineDiff()
 		var initialTrigger *tui.ReviewTrigger
 		if strings.TrimSpace(baselineDiff) != "" {
 			lines := strings.Count(baselineDiff, "\n")
-			initialTrigger = &tui.ReviewTrigger{
-				Diff:        baselineDiff,
-				TriggerType: "settle",
-				Info:        fmt.Sprintf("have uncommitted changes (%d lines)", lines),
+			if lines <= 200 {
+				initialTrigger = &tui.ReviewTrigger{
+					Diff:        baselineDiff,
+					TriggerType: "settle",
+					Info:        fmt.Sprintf("have uncommitted changes (%d lines)", lines),
+				}
 			}
 		}
 
