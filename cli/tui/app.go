@@ -28,8 +28,6 @@ type StreamDoneMsg struct{ Response *llm.Response }
 type StreamErrorMsg struct{ Err error }
 type ReviewTriggerMsg struct{ Trigger ReviewTrigger }
 type listenTickMsg struct{}
-type conceptPickerDismissMsg struct{ gen int }
-
 // SessionStats tracks session metrics.
 type SessionStats struct {
 	StartTime time.Time
@@ -59,7 +57,6 @@ type Model struct {
 	sessionMemory  *learning.SessionMemory
 	newConcepts      []string // concepts available in the picker
 	conceptIdx       int      // currently highlighted picker index
-	conceptPickerGen int      // generation counter to ignore stale timeouts
 	lastReviewCtx    *repocontext.RepoContext
 	settings     settingsState
 	watcher      *watcher.Watcher
@@ -182,12 +179,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	case conceptPickerDismissMsg:
-		if m.state == "concept_pick" && msg.gen == m.conceptPickerGen {
-			return m, m.dismissConceptPicker()
-		}
-		return m, nil
-
 	case ReviewTriggerMsg:
 		if m.state == "concept_pick" {
 			_ = m.dismissConceptPicker() // trigger handling below takes over
@@ -263,12 +254,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 					// Show concept picker if there are new concepts (non-blocking: input stays enabled)
 					if len(newConcepts) > 0 {
-						m.conceptPickerGen++
 						m.newConcepts = newConcepts
 						m.conceptIdx = 0
 						m.state = "concept_pick"
 						m.output.ShowConceptPicker(newConcepts, 0)
-						cmds = append(cmds, conceptPickerTimeout(m.conceptPickerGen))
 					}
 				}
 				for _, entry := range covered {
@@ -457,12 +446,6 @@ func waitForChunk(ch <-chan string) tea.Cmd {
 		}
 		return ChunkMsg{Text: chunk}
 	}
-}
-
-func conceptPickerTimeout(gen int) tea.Cmd {
-	return tea.Tick(30*time.Second, func(time.Time) tea.Msg {
-		return conceptPickerDismissMsg{gen: gen}
-	})
 }
 
 func (m *Model) dismissConceptPicker() tea.Cmd {
