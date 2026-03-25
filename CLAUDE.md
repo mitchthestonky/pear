@@ -108,3 +108,14 @@ All config under `~/.pear/`. Nothing in the user's repo except optional git hook
 - Conventional commits: `feat:`, `fix:`, `refactor:`, `docs:`
 - No co-authored-by lines
 - Commit after each ticket is complete
+
+## Workflow
+- Read your ticket file AND the referenced event model sections before starting.
+- Check dependency tickets are complete before starting yours.
+- Produce drafts for approval on plans and design docs.
+- Sprint-based development — check docs/ for current sprint context.
+
+## Agent Coordination
+- When running as one of multiple parallel Claude instances, work in a git worktree.
+- Stay within your assigned files/areas. Don't touch code owned by another agent.
+- If you discover a conflict or dependency with another agent's work, flag it rather than resolving it.
