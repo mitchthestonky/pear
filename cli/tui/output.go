@@ -203,8 +203,8 @@ func (m *OutputModel) RemoveConceptPicker() {
 	m.refreshViewport()
 }
 
-const pickerStartMarker = "\x00PICKER_START\x00"
-const pickerEndMarker = "\x00PICKER_END\x00"
+const pickerStartMarker = "\x00PICKER_START\x00\n"
+const pickerEndMarker = "\n\x00PICKER_END\x00"
 
 func (m *OutputModel) removeConceptPicker() {
 	s := m.content.String()
@@ -250,15 +250,20 @@ func (m *OutputModel) Clear() {
 }
 
 func (m *OutputModel) refreshViewport() {
+	var content string
 	if m.streaming && m.stream.Len() > 0 {
 		// During streaming, show raw text for smooth character-by-character output.
 		// Glamour re-renders the full buffer on every chunk which causes visible jumps.
 		// Final glamour render happens in EndStream.
 		// Strip tags so they don't flash before being replaced by styled UI elements.
-		m.viewport.SetContent(m.content.String() + learning.StripTags(m.stream.String()))
+		content = m.content.String() + learning.StripTags(m.stream.String())
 	} else {
-		m.viewport.SetContent(m.content.String())
+		content = m.content.String()
 	}
+	// Strip internal markers that should never be visible
+	content = strings.ReplaceAll(content, "\x00PICKER_START\x00", "")
+	content = strings.ReplaceAll(content, "\x00PICKER_END\x00", "")
+	m.viewport.SetContent(content)
 	if m.autoScroll {
 		if m.viewport.TotalLineCount() > m.viewport.Height {
 			m.viewport.GotoBottom()

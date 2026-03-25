@@ -3,7 +3,6 @@ package tui
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -71,7 +70,7 @@ type Model struct {
 
 // NewModel creates a new TUI model.
 func NewModel(cfg *config.Config, client llm.LLMClient, mode string, triggers <-chan ReviewTrigger) Model {
-	lpath := filepath.Join(config.Dir(), "learning.json")
+	lpath := config.LearningPath()
 	store, _ := learning.Load(lpath)
 	output := NewOutputModel(80, 20)
 	bannerFn := func(w int) string { return WelcomeBanner(cfg, w) }
@@ -461,7 +460,7 @@ func waitForChunk(ch <-chan string) tea.Cmd {
 }
 
 func conceptPickerTimeout(gen int) tea.Cmd {
-	return tea.Tick(10*time.Second, func(time.Time) tea.Msg {
+	return tea.Tick(30*time.Second, func(time.Time) tea.Msg {
 		return conceptPickerDismissMsg{gen: gen}
 	})
 }
