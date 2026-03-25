@@ -366,7 +366,8 @@ func (m Model) renderBottom() string {
 		key.Render("Enter") + dim.Render(" to send • ") +
 		key.Render("@") + dim.Render(" mention data • ") +
 		key.Render("/copy") + dim.Render(" latest response • ") +
-		key.Render("/") + dim.Render(" commands list")
+		key.Render("/") + dim.Render(" commands list • ") +
+		key.Render("↑↓") + dim.Render(" scroll")
 	b.WriteString("\n")
 	b.WriteString(hints)
 
