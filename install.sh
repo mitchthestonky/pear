@@ -46,6 +46,12 @@ echo "Installing to ${INSTALL_DIR}/pear..."
 sudo install -m 755 "${TMPDIR}/pear" "${INSTALL_DIR}/pear"
 rm -rf "$TMPDIR"
 
+# Track install (best-effort, non-blocking)
+curl -sL -X POST "https://www.pearcode.dev/api/install" \
+  -H "Content-Type: application/json" \
+  -d "{\"os\":\"${OS}\",\"arch\":\"${ARCH}\",\"version\":\"${LATEST}\"}" \
+  >/dev/null 2>&1 &
+
 echo ""
 echo "pear installed successfully!"
 echo ""
